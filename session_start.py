@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""SessionStart hook: a few lines of brain context for Claude. No network, no model calls.
+
+Prints Claude's active habits, habits the user hasn't decided on, and anything waiting in the inbox.
+Notes folder = parent of this folder, or $BRAIN_NOTES. Silent if it isn't there, so it never blocks a session.
+"""
+import os
+import re
+
+NOTES = os.path.expanduser(os.environ.get("BRAIN_NOTES") or os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def read(rel):
+    try:
+        with open(os.path.join(NOTES, rel), encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+
+def blocks(text):
+    out = []
+    for m in re.finditer(r"^## ([A-Z]+-\d+) · (.+)\n((?:- [a-z_]+:.*\n?)*)", text, re.M):
+        status = re.search(r"^- status:\s*(\w+)", m.group(3), re.M)
+        out.append((m.group(1), m.group(2).strip(), status.group(1) if status else ""))
+    return out
+
+
+def main():
+    if not os.path.isdir(NOTES):
+        return
+    habits = blocks(read("claude/habits.md"))
+    on = [t for _, t, s in habits if s == "on"]
+    proposed = [t for _, t, s in habits if s == "proposed"]
+    inbox = [l[2:] for l in read("inbox.md").splitlines() if l.startswith("- ")]
+    name = (re.search(r"^name:\s*(\S+)", read("me.md"), re.M) or [None, "the user"])[1]
+    home = NOTES.replace(os.path.expanduser("~"), "~", 1)
+    lines = ["[Brain] %s is %s's brain: read %s/INDEX.md + the relevant project page before project work." % (home, name, home)]
+    if on:
+        lines.append("Habits %s has on (follow them): " % name + " | ".join(on))
+    if proposed:
+        lines.append("Proposed habits awaiting %s in the app (don't follow yet): " % name + " | ".join(proposed))
+    if inbox:
+        lines.append("Inbox has %d capture(s) from the app — file each into the right note, then delete it from inbox.md:" % len(inbox))
+        lines += ["  - " + i for i in inbox[:15]]
+    print("\n".join(lines))
+
+
+if __name__ == "__main__":
+    main()

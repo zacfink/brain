@@ -1,0 +1,10 @@
+# runtime
+app/.brain.pid
+app/.brain.log
+__pycache__/
+*.pyc
+.claude/
+.DS_Store
+# generated from the example notes when you try it
+example/INDEX.md
+docs/*.tmp.png

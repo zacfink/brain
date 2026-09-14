@@ -1,0 +1,396 @@
+#!/usr/bin/env python3
+"""Brain: a local app over a folder of markdown notes.
+
+Run: python3 app/server.py [--port 4747] [--notes DIR] [--no-open]
+The notes folder defaults to the parent of the brain folder (e.g. ~/Notes/.brain -> ~/Notes);
+--notes or $BRAIN_NOTES overrides it.
+Stdlib only (Python 3.9+). Binds to 127.0.0.1. Every API call needs the per-run token that is
+injected into the page, and the Host header must be local, so other websites can't read or write
+the notes.
+"""
+import datetime
+import glob
+import http.server
+import json
+import os
+import re
+import secrets
+import socketserver
+import subprocess
+import sys
+import threading
+import urllib.parse
+import webbrowser
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+BRAIN = os.path.dirname(HERE)
+if "--notes" in sys.argv:
+    os.environ["BRAIN_NOTES"] = sys.argv[sys.argv.index("--notes") + 1]
+NOTES = os.path.abspath(os.path.expanduser(os.environ.get("BRAIN_NOTES") or os.path.dirname(BRAIN)))
+os.environ["BRAIN_NOTES"] = NOTES
+sys.path.insert(0, BRAIN)
+import build  # noqa: E402  (INDEX.md generator + frontmatter parser)
+
+TOKEN = secrets.token_urlsafe(24)
+CLAUDE_PROJECTS = os.path.expanduser("~/.claude/projects")
+LOCK = threading.Lock()
+
+
+# ---------------------------------------------------------------- helpers
+def today():
+    return datetime.date.today().isoformat()
+
+
+def read(rel):
+    path = os.path.join(NOTES, rel)
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+def write(rel, text):
+    path = os.path.join(NOTES, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def safe_rel(rel):
+    """Only .md files inside ~/Notes, never inside dot-folders."""
+    if not isinstance(rel, str) or not rel.endswith(".md"):
+        return None
+    full = os.path.realpath(os.path.join(NOTES, rel))
+    if not full.startswith(os.path.realpath(NOTES) + os.sep):
+        return None
+    inner = os.path.relpath(full, os.path.realpath(NOTES))
+    if any(part.startswith(".") for part in inner.split(os.sep)):
+        return None
+    return inner
+
+
+def rebuild_index():
+    try:
+        docs = build.load_notes()
+        known = [p for d in docs if d["kind"] == "project" for p in build.as_list(d["meta"].get("paths"))]
+        with open(os.path.join(NOTES, "INDEX.md"), "w", encoding="utf-8") as f:
+            f.write(build.build_index(docs, build.other_folders(known)))
+    except Exception as e:  # the index is a convenience; never fail a save over it
+        print("index rebuild failed:", e, file=sys.stderr)
+
+
+# ------------------------------------------------ "## ID · title" + "- key: value" blocks
+BLOCK = re.compile(r"^## ([A-Z]+-\d+) · (.+)$", re.M)
+
+
+def parse_blocks(text):
+    items = []
+    heads = list(BLOCK.finditer(text))
+    for i, m in enumerate(heads):
+        body = text[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(text)]
+        fields = {}
+        for line in body.splitlines():
+            fm = re.match(r"^- ([a-z_]+):[ \t]*(.*?)(?:\s{2,}#.*)?\s*$", line)
+            if fm:
+                fields[fm.group(1)] = fm.group(2)
+        items.append({"id": m.group(1), "title": m.group(2).strip(), **fields})
+    return items
+
+
+def set_fields(text, item_id, updates):
+    heads = list(BLOCK.finditer(text))
+    for i, m in enumerate(heads):
+        if m.group(1) != item_id:
+            continue
+        start, end = m.end(), heads[i + 1].start() if i + 1 < len(heads) else len(text)
+        body = text[start:end]
+        for key, val in updates.items():
+            pat = re.compile(r"^- %s:[^\n]*$" % re.escape(key), re.M)
+            line = "- %s: %s" % (key, val)
+            if pat.search(body):
+                body = pat.sub(lambda _: line, body, count=1)
+            else:  # add the field after the block's last "- key:" line
+                last = list(re.finditer(r"^- [a-z_]+:[^\n]*$", body, re.M))
+                cut = last[-1].end() if last else 0
+                body = body[:cut] + "\n" + line + body[cut:]
+        return text[:start] + body + text[end:]
+    raise KeyError(item_id)
+
+
+# ---------------------------------------------------------------- sessions → resume commands
+def session_index():
+    """short id → (full uuid, cwd recorded in the transcript)."""
+    out = {}
+    for f in glob.glob(os.path.join(CLAUDE_PROJECTS, "*", "*.jsonl")):
+        sid = os.path.basename(f)[:-6]
+        out[sid[:8]] = {"uuid": sid, "cwd": None, "file": f}
+    return out
+
+
+def transcript_cwd(path):
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            for _ in range(40):
+                line = f.readline()
+                if not line:
+                    break
+                m = re.search(r'"cwd":"([^"]+)"', line)
+                if m:
+                    return m.group(1)
+    except OSError:
+        pass
+    return None
+
+
+def resume_for(short_ids, fallback_cwd, idx):
+    for short in reversed(short_ids):  # merged notes list the earliest first; resume the latest
+        hit = idx.get(short)
+        if hit:
+            cwd = transcript_cwd(hit["file"]) or os.path.expanduser(fallback_cwd or "~")
+            return {"uuid": hit["uuid"], "cwd": cwd,
+                    "command": 'cd "%s" && claude --resume %s' % (cwd, hit["uuid"])}
+    return None
+
+
+# ---------------------------------------------------------------- state
+def streak(dates):
+    days = set(dates)
+    n, d = 0, datetime.date.today()
+    if d.isoformat() not in days:
+        d -= datetime.timedelta(days=1)
+    while d.isoformat() in days:
+        n += 1
+        d -= datetime.timedelta(days=1)
+    return n
+
+
+def state():
+    docs = build.load_notes()
+    idx = session_index()
+    by_path = {d["path"]: d for d in docs}
+
+    def slim(d):
+        return {"path": d["path"], "title": d["title"], "meta": d["meta"], "tldr": d["tldr"],
+                "date": d["date"], "open": d["open"][:8]}
+
+    sessions = sorted((d for d in docs if d["kind"] == "session"), key=lambda d: d["path"], reverse=True)
+    session_out = []
+    latest_resume = {}
+    for s in sessions:
+        item = slim(s)
+        item["resume"] = resume_for(build.as_list(s["meta"].get("session")), s["meta"].get("cwd"), idx)
+        session_out.append(item)
+        for p in build.as_list(s["meta"].get("projects")):
+            if item["resume"] and p not in latest_resume:
+                latest_resume[p] = item["resume"]
+
+    projects = []
+    for d in docs:
+        if d["kind"] != "project":
+            continue
+        slug = os.path.basename(d["path"])[:-3]
+        item = slim(d)
+        item["slug"] = slug
+        item["resume"] = latest_resume.get(slug)
+        item["sessions"] = sum(slug in build.as_list(s["meta"].get("projects")) for s in sessions)
+        item["folders"] = [os.path.expanduser(p) for p in build.as_list(d["meta"].get("paths"))]
+        projects.append(item)
+    order = {"active": 0, "paused": 1, "done": 2, "abandoned": 3}
+    projects.sort(key=lambda p: (order.get(p["meta"].get("status"), 9), p["title"].lower()))
+
+    people = [slim(d) for d in docs if d["path"].startswith("people/")]
+    people.sort(key=lambda p: (not p["meta"].get("follow_up"), p["title"].lower()))
+
+    nudges = parse_blocks(read("nudges.md"))
+    t = today()
+    for n in nudges:  # a snooze that has run out is open again
+        if n.get("status") == "snoozed" and n.get("snooze_until") and n["snooze_until"] <= t:
+            n["status"] = "open"
+    habits = parse_blocks(read("claude/habits.md"))
+
+    now_meta, now_body = build.parse_frontmatter(read("now.md"))
+    upcoming = []
+    for line in now_body.splitlines():
+        m = re.match(r"^- (\d{4}-\d{2}-\d{2})(?: (\d{1,2}:\d{2}))? · ([^·]+?)(?: · (.+))?$", line.strip())
+        if m:
+            upcoming.append({"date": m.group(1), "time": m.group(2), "title": m.group(3).strip(), "detail": m.group(4)})
+    upcoming = [u for u in upcoming if u["date"] >= t]
+
+    me_meta, me_body = build.parse_frontmatter(read("me.md"))
+    inbox = [l[2:] for l in read("inbox.md").splitlines() if l.startswith("- ")]
+    ideas = [l[2:] for l in read("ideas.md").splitlines() if l.startswith("- ")]
+
+    activity = [s["meta"].get("date", "") for s in sessions] + [n.get("done_on", "") for n in nudges]
+    activity += [i[:10] for i in inbox]
+    iso = datetime.date.today().isocalendar()
+
+    return {
+        "today": t, "issue": iso[1], "streak": streak([a for a in activity if a]),
+        "now": {**now_meta, "upcoming": upcoming[:8]},
+        "me": {"meta": me_meta, "exists": bool(me_body.strip()), "path": "me.md",
+               "snapshot": re.findall(r"^- (.+)$", me_body.split("## Goals")[0], re.M)[:5]},
+        "nudges": nudges, "habits": habits, "projects": projects, "people": people,
+        "sessions": session_out[:60], "inbox": inbox, "ideas": ideas[-12:][::-1],
+        "notes": [slim(d) for d in docs if d["kind"] == "note" and not d["path"].startswith("people/")
+                  and d["path"] not in ("me.md", "now.md", "nudges.md", "ideas.md", "inbox.md", "claude/habits.md")],
+        "has": {k: k in by_path for k in ("me.md", "now.md")},
+    }
+
+
+# ---------------------------------------------------------------- actions
+def act_nudge(body):
+    action, nid = body.get("action"), body.get("id")
+    updates = {
+        "done": {"status": "done", "done_on": today()},
+        "no": {"status": "no"},
+        "reopen": {"status": "open", "snooze_until": ""},
+        "snooze": {"status": "snoozed", "snooze_until": (datetime.date.today() + datetime.timedelta(
+            days=max(1, min(60, int(body.get("days") or 3))))).isoformat()},
+    }.get(action)
+    if not updates:
+        raise ValueError("unknown action")
+    write("nudges.md", set_fields(read("nudges.md"), nid, updates))
+
+
+def act_habit(body):
+    status = body.get("status")
+    if status not in ("on", "off", "proposed"):
+        raise ValueError("bad status")
+    write("claude/habits.md", set_fields(read("claude/habits.md"), body.get("id"), {"status": status}))
+
+
+def act_capture(body):
+    kind = body.get("kind") if body.get("kind") in ("note", "idea", "todo", "person") else "note"
+    text = " ".join(str(body.get("text") or "").split())[:2000]
+    if not text:
+        raise ValueError("empty")
+    current = read("inbox.md") or "# Inbox\n"
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    write("inbox.md", current.rstrip("\n") + "\n- %s · %s · %s\n" % (stamp, kind, text))
+
+
+def file_get(query):
+    rel = safe_rel(query.get("path", [""])[0])
+    if not rel:
+        raise PermissionError("path")
+    full = os.path.join(NOTES, rel)
+    exists = os.path.exists(full)
+    return {"path": rel, "text": read(rel), "mtime": os.path.getmtime(full) if exists else None, "exists": exists}
+
+
+def file_put(body):
+    rel = safe_rel(body.get("path"))
+    if not rel:
+        raise PermissionError("path")
+    full = os.path.join(NOTES, rel)
+    if os.path.exists(full) and body.get("mtime") is not None and abs(os.path.getmtime(full) - float(body["mtime"])) > 0.001:
+        return 409, {"error": "This file changed on disk since you opened it (Claude may have edited it). Reload to see the new version."}
+    write(rel, str(body.get("text", "")))
+    rebuild_index()
+    return 200, {"ok": True, "mtime": os.path.getmtime(full)}
+
+
+# ---------------------------------------------------------------- http
+class Handler(http.server.BaseHTTPRequestHandler):
+    server_version = "Brain/1"
+
+    def log_message(self, fmt, *args):
+        if "--verbose" in sys.argv:
+            super().log_message(fmt, *args)
+
+    def local_host(self):
+        host = (self.headers.get("Host") or "").split(":")[0]
+        return host in ("127.0.0.1", "localhost")
+
+    def send(self, code, payload, ctype="application/json"):
+        data = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def authed(self):
+        return self.local_host() and secrets.compare_digest(self.headers.get("X-Brain-Token", ""), TOKEN)
+
+    def body(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        if n > 2_000_000:
+            raise ValueError("too large")
+        return json.loads(self.rfile.read(n) or b"{}")
+
+    def do_GET(self):
+        if not self.local_host():
+            return self.send(403, {"error": "forbidden"})
+        url = urllib.parse.urlparse(self.path)
+        if url.path in ("/", "/index.html"):
+            with open(os.path.join(HERE, "index.html"), encoding="utf-8") as f:
+                html = f.read().replace("__BRAIN_TOKEN__", TOKEN).replace("__NOTES_ROOT__", NOTES)
+            return self.send(200, html.encode(), "text/html; charset=utf-8")
+        if not self.authed():
+            return self.send(403, {"error": "forbidden"})
+        try:
+            if url.path == "/api/state":
+                return self.send(200, state())
+            if url.path == "/api/file":
+                return self.send(200, file_get(urllib.parse.parse_qs(url.query)))
+        except PermissionError:
+            return self.send(403, {"error": "That path isn't a note."})
+        except Exception as e:
+            return self.send(500, {"error": str(e)})
+        self.send(404, {"error": "not found"})
+
+    def do_POST(self):
+        if not self.authed():
+            return self.send(403, {"error": "forbidden"})
+        routes = {"/api/nudge": act_nudge, "/api/habit": act_habit, "/api/capture": act_capture}
+        path = urllib.parse.urlparse(self.path).path
+        try:
+            with LOCK:
+                if path == "/api/file":
+                    code, out = file_put(self.body())
+                    return self.send(code, out)
+                if path not in routes:
+                    return self.send(404, {"error": "not found"})
+                routes[path](self.body())
+            return self.send(200, {"ok": True})
+        except KeyError:
+            return self.send(404, {"error": "No such item — the file may have changed. Reload."})
+        except PermissionError:
+            return self.send(403, {"error": "That path isn't a note."})
+        except (ValueError, TypeError) as e:
+            return self.send(400, {"error": str(e)})
+
+
+class Server(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
+def main():
+    port = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 4747
+    try:
+        httpd = Server(("127.0.0.1", port), Handler)
+    except OSError:
+        print("Brain is already running on http://127.0.0.1:%d (or the port is taken)." % port)
+        if "--no-open" not in sys.argv:
+            print("Restart it with: brain restart")
+        sys.exit(1)
+    url = "http://127.0.0.1:%d/" % port
+    print("Brain running at %s  (Ctrl+C to stop)" % url)
+    rebuild_index()
+    if "--no-open" not in sys.argv:
+        threading.Timer(0.4, lambda: subprocess.run(["open", url]) if sys.platform == "darwin" else webbrowser.open(url)).start()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nBrain stopped.")
+
+
+if __name__ == "__main__":
+    main()

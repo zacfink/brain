@@ -1,0 +1,50 @@
+#!/bin/bash
+# brain — open your notes app
+#   brain           start in the background (if needed) and open the browser
+#   brain stop      stop it
+#   brain restart   restart (after editing the app)
+#   brain log       show the server log
+# Env: BRAIN_NOTES (notes folder, default: parent of the brain folder), BRAIN_PORT (default 4747)
+set -euo pipefail
+
+# Resolve this script through a symlink (e.g. ~/.local/bin/brain -> <brain>/bin/brain).
+SELF="$0"
+while [[ -L "$SELF" ]]; do
+  LINK="$(readlink "$SELF")"
+  [[ "$LINK" = /* ]] && SELF="$LINK" || SELF="$(dirname "$SELF")/$LINK"
+done
+BRAIN="$(cd "$(dirname "$SELF")/.." && pwd)"
+APP="$BRAIN/app"
+PORT="${BRAIN_PORT:-4747}"
+URL="http://127.0.0.1:$PORT/"
+PIDFILE="$APP/.brain.pid"
+LOG="$APP/.brain.log"
+NOTES_ARGS=()
+[[ -n "${BRAIN_NOTES:-}" ]] && NOTES_ARGS=(--notes "$BRAIN_NOTES")
+
+open_url() { if command -v open >/dev/null; then open "$URL"; elif command -v xdg-open >/dev/null; then xdg-open "$URL"; fi; }
+running() { [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
+
+stop() {
+  if running; then kill "$(cat "$PIDFILE")" && echo "Brain stopped."; else echo "Brain wasn't running."; fi
+  rm -f "$PIDFILE"
+}
+
+start() {
+  if running; then open_url; echo "Brain is running → $URL"; return; fi
+  nohup /usr/bin/env python3 "$APP/server.py" --port "$PORT" --no-open ${NOTES_ARGS[@]+"${NOTES_ARGS[@]}"} >"$LOG" 2>&1 &
+  echo $! >"$PIDFILE"
+  for _ in $(seq 1 30); do
+    if curl -s -o /dev/null "$URL"; then open_url; echo "Brain is up → $URL  (brain stop to quit)"; return; fi
+    sleep 0.1
+  done
+  echo "Brain didn't start. Log:"; cat "$LOG"; rm -f "$PIDFILE"; exit 1
+}
+
+case "${1:-}" in
+  stop) stop ;;
+  restart) stop; start ;;
+  log) cat "$LOG" ;;
+  "") start ;;
+  *) sed -n '2,7p' "$SELF"; exit 1 ;;
+esac
