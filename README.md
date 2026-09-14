@@ -8,11 +8,14 @@ act on them.
 
 - **Cover story:** Claude writes a magazine-style headline about your week after real work.
 - **Notes to self:** reminders Claude adds only when they help. You can mark them Done (with confetti), snooze them, or say "Not doing this", which retires them for good.
-- **How Claude adapts to you:** habits Claude follows every session. Claude can *propose* a new one, and you switch each on or off.
+- **Projects:** hide the ones you're not working on; they wait under "Show hidden".
+- **How Claude adapts to you:** habits Claude follows every session. Claude can *propose* a new one, and you switch each on or off. You can also brainstorm a habit in the app, and Claude talks it through with you next session. Past habits stay out of the way.
 - **⌘K capture:** type a thought, idea, to-do or person. Claude files it into the right note next session.
+- **Ideas board:** mark ideas done or dismiss them.
 - **Edit in place:** every note, person and project page opens in a side panel with a live markdown preview. ⌘S saves the file.
 - **Reopen anything:** copy the command to resume a past Claude Code chat, open a project in VS Code, or open its live site.
-- **Everything we've done:** one self-contained note per session, grouped by project.
+- **Everything we've done:** one self-contained note per session, in a full-width timeline.
+- **People & me:** your profile and contacts, one click away but out of the main view.
 
 Everything is plain markdown on your machine. The app is ~1 Python file plus ~1 HTML file, uses only the standard
 library, and has no build step.

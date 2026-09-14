@@ -22,7 +22,8 @@ def blocks(text):
     out = []
     for m in re.finditer(r"^## ([A-Z]+-\d+) · (.+)\n((?:- [a-z_]+:.*\n?)*)", text, re.M):
         status = re.search(r"^- status:\s*(\w+)", m.group(3), re.M)
-        out.append((m.group(1), m.group(2).strip(), status.group(1) if status else ""))
+        source = re.search(r"^- source:\s*(.*)$", m.group(3), re.M)
+        out.append((m.group(1), m.group(2).strip(), status.group(1) if status else "", source.group(1).strip() if source else ""))
     return out
 
 
@@ -30,8 +31,9 @@ def main():
     if not os.path.isdir(NOTES):
         return
     habits = blocks(read("claude/habits.md"))
-    on = [t for _, t, s in habits if s == "on"]
-    proposed = [t for _, t, s in habits if s == "proposed"]
+    on = [t for _, t, s, _src in habits if s == "on"]
+    proposed = [t for _, t, s, src in habits if s == "proposed" and not src.startswith("brainstorm")]
+    brainstorm = [t for _, t, s, src in habits if s == "proposed" and src.startswith("brainstorm")]
     inbox = [l[2:] for l in read("inbox.md").splitlines() if l.startswith("- ")]
     name = (re.search(r"^name:\s*(\S+)", read("me.md"), re.M) or [None, "the user"])[1]
     home = NOTES.replace(os.path.expanduser("~"), "~", 1)
@@ -40,6 +42,9 @@ def main():
         lines.append("Habits %s has on (follow them): " % name + " | ".join(on))
     if proposed:
         lines.append("Proposed habits awaiting %s in the app (don't follow yet): " % name + " | ".join(proposed))
+    if brainstorm:
+        lines.append("%s brainstormed these habits in the app — early in this session, talk each through with them, "
+                     "sharpen the wording/why, then set status on or off as they decide: " % name + " | ".join(brainstorm))
     if inbox:
         lines.append("Inbox has %d capture(s) from the app — file each into the right note, then delete it from inbox.md:" % len(inbox))
         lines += ["  - " + i for i in inbox[:15]]

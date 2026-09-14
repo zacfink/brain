@@ -196,6 +196,7 @@ def state():
         item["resume"] = latest_resume.get(slug)
         item["sessions"] = sum(slug in build.as_list(s["meta"].get("projects")) for s in sessions)
         item["folders"] = [os.path.expanduser(p) for p in build.as_list(d["meta"].get("paths"))]
+        item["archived"] = bool(d["meta"].get("archived"))
         projects.append(item)
     order = {"active": 0, "paused": 1, "done": 2, "abandoned": 3}
     projects.sort(key=lambda p: (order.get(p["meta"].get("status"), 9), p["title"].lower()))
@@ -220,7 +221,7 @@ def state():
 
     me_meta, me_body = build.parse_frontmatter(read("me.md"))
     inbox = [l[2:] for l in read("inbox.md").splitlines() if l.startswith("- ")]
-    ideas = [l[2:] for l in read("ideas.md").splitlines() if l.startswith("- ")]
+    ideas = idea_sections(read("ideas.md"))
 
     activity = [s["meta"].get("date", "") for s in sessions] + [n.get("done_on", "") for n in nudges]
     activity += [i[:10] for i in inbox]
@@ -232,14 +233,89 @@ def state():
         "me": {"meta": me_meta, "exists": bool(me_body.strip()), "path": "me.md",
                "snapshot": re.findall(r"^- (.+)$", me_body.split("## Goals")[0], re.M)[:5]},
         "nudges": nudges, "habits": habits, "projects": projects, "people": people,
-        "sessions": session_out[:60], "inbox": inbox, "ideas": ideas[-12:][::-1],
+        "sessions": session_out[:60], "inbox": inbox, "ideas": ideas["open"][::-1], "ideas_closed": {"done": len(ideas["done"]), "dismissed": len(ideas["dismissed"])},
         "notes": [slim(d) for d in docs if d["kind"] == "note" and not d["path"].startswith("people/")
                   and d["path"] not in ("me.md", "now.md", "nudges.md", "ideas.md", "inbox.md", "claude/habits.md")],
         "has": {k: k in by_path for k in ("me.md", "now.md")},
     }
 
 
+# ---------------------------------------------------------------- ideas: open list, then "## Done" / "## Dismissed"
+IDEA_SECTIONS = {"done": "## Done", "dismissed": "## Dismissed"}
+
+
+def idea_sections(text):
+    out, current = {"open": [], "done": [], "dismissed": []}, "open"
+    for line in text.splitlines():
+        heading = line.strip().lower()
+        if heading.startswith("## "):
+            current = "done" if heading == "## done" else "dismissed" if heading == "## dismissed" else current
+        elif line.startswith("- "):
+            out[current].append(line[2:])
+    return out
+
+
+def render_ideas(sections):
+    text = "# Ideas\n" + "".join("- %s\n" % i for i in sections["open"])
+    for key, heading in IDEA_SECTIONS.items():
+        if sections[key]:
+            text += "\n%s\n" % heading + "".join("- %s\n" % i for i in sections[key])
+    return text
+
+
 # ---------------------------------------------------------------- actions
+def act_idea(body):
+    action, line = body.get("action"), str(body.get("text") or "")
+    sections = idea_sections(read("ideas.md"))
+    if action in ("done", "dismissed"):
+        if line not in sections["open"]:
+            raise KeyError(line)
+        sections["open"].remove(line)
+        sections[action].append("%s (%s %s)" % (line, action, today()))
+    elif action == "restore":
+        for key in ("done", "dismissed"):
+            match = next((i for i in sections[key] if i == line or i.startswith(line + " (")), None)
+            if match:
+                sections[key].remove(match)
+                sections["open"].append(re.sub(r" \((done|dismissed) \d{4}-\d{2}-\d{2}\)$", "", match))
+                break
+        else:
+            raise KeyError(line)
+    else:
+        raise ValueError("unknown action")
+    write("ideas.md", render_ideas(sections))
+
+
+def act_project(body):
+    rel = safe_rel(body.get("path"))
+    if not rel or not rel.startswith("projects/"):
+        raise PermissionError("path")
+    text = read(rel)
+    if not text.startswith("---\n"):
+        raise ValueError("project page has no frontmatter")
+    end = text.find("\n---", 4)
+    head, rest = text[4:end], text[end:]
+    head = re.sub(r"^archived:.*\n?", "", head, flags=re.M).rstrip("\n")
+    if body.get("archived"):
+        head += "\narchived: %s" % today()
+    write(rel, "---\n" + head + rest)
+    rebuild_index()
+
+
+def act_habit_new(body):
+    title = " ".join(str(body.get("title") or "").split())[:160]
+    why = " ".join(str(body.get("why") or "").split())[:600]
+    if not title:
+        raise ValueError("empty")
+    text = read("claude/habits.md") or "# Claude's habits\n"
+    ids = [int(m) for m in re.findall(r"^## H-(\d+) ·", text, re.M)]
+    block = ("\n## H-%03d · %s\n- status: proposed\n- why: %s\n- since: %s\n"
+             "- source: brainstorm — typed in the app; Claude: talk it through with the user next session and refine it\n"
+             % ((max(ids) if ids else 0) + 1, title, why or "(to discuss)", today()))
+    write("claude/habits.md", text.rstrip("\n") + "\n" + block)
+
+
+
 def act_nudge(body):
     action, nid = body.get("action"), body.get("id")
     updates = {
@@ -348,7 +424,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.authed():
             return self.send(403, {"error": "forbidden"})
-        routes = {"/api/nudge": act_nudge, "/api/habit": act_habit, "/api/capture": act_capture}
+        routes = {"/api/nudge": act_nudge, "/api/habit": act_habit, "/api/capture": act_capture,
+                  "/api/idea": act_idea, "/api/project": act_project, "/api/habit-new": act_habit_new}
         path = urllib.parse.urlparse(self.path).path
         try:
             with LOCK:

@@ -54,7 +54,9 @@ Claude adds one only when it clearly helps. Status `no` is permanent: never re-a
 ```
 
 ## `claude/habits.md` — how Claude adapts to you
-`on` habits are followed every session. `proposed` ones wait for you to flip them on in the app.
+`on` habits are followed every session. `off` ones show under "Past habits". `proposed` ones wait for you to decide.
+A habit typed into the app's brainstorm box is saved as `proposed` with a `source:` starting `brainstorm` —
+the SessionStart hook asks Claude to talk it through with you and refine it.
 ```
 # Claude's habits
 
@@ -80,9 +82,17 @@ updated: 2026-09-14
 ```
 
 ## `ideas.md`
+Open ideas are the bullets before any section. The app moves an idea to `## Done` or `## Dismissed`
+(appending `(done YYYY-MM-DD)`), and can restore it.
 ```
 # Ideas
 - 2026-09-14 · Idea text — optional note (project: slug)
+
+## Done
+- 2026-09-01 · Shipped idea (done 2026-09-14)
+
+## Dismissed
+- 2026-08-20 · Idea you passed on (dismissed 2026-09-14)
 ```
 
 ## `inbox.md` — quick captures from the app
@@ -95,5 +105,6 @@ Kinds: `note`, `idea`, `todo`, `person`.
 
 ## `projects/<slug>.md` and `sessions/YYYY-MM-DD-<slug>.md`
 Project pages: frontmatter `name, status (active|paused|done|abandoned), updated, paths: [...], links: [...], summary`,
+optional `archived: YYYY-MM-DD` (set by the app's hide button; hidden projects appear under "Show hidden"),
 then `**TL;DR:**` and sections. Session notes: see `session-template.md`. A session's `session:` id (first 8 chars
 of the Claude Code session id) powers the app's "resume chat" button.
