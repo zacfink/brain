@@ -11,7 +11,7 @@ Being 90% sure and wrong costs far more than being 55% sure and wrong.
 import datetime
 import re
 
-LINE = re.compile(r"^- (\d{4}-\d{2}-\d{2}) · (\d{1,3})% · (recommend|guess|draft|habit) · bet: (.+?) · got: (.+?) · (hit|miss)\s*$")
+LINE = re.compile(r"^- (\d{4}-\d{2}-\d{2}) · (\d{1,3})% · (recommend|guess|draft|habit) · bet: (.+?) · got: (.+?) · (hit|miss)(?: · jev: (\d{1,3})%)?\s*$")
 BUCKETS = [(50, 60), (60, 70), (70, 80), (80, 90), (90, 101)]
 
 
@@ -22,15 +22,17 @@ def parse(text):
         if m:
             conf = min(max(int(m.group(2)), 50), 100)  # a bet below 50% is a bet on the other answer
             out.append({"date": m.group(1), "conf": conf, "kind": m.group(3), "bet": m.group(4).strip(),
-                        "got": m.group(5).strip(), "hit": m.group(6) == "hit"})
+                        "got": m.group(5).strip(), "hit": m.group(6) == "hit",
+                        "jev": None if m.group(7) is None else min(int(m.group(7)), 100)})
     return out
 
 
-def score(entries):
-    """Brier skill score vs always saying 50%, as 0-100 (can go negative when overconfident and wrong)."""
+def score(entries, key="conf"):
+    """Brier skill score vs always saying 50%, as 0-100 (can go negative when overconfident and wrong).
+    key="jev" scores Jev's chance of the same bets instead of Claude's confidence."""
     if not entries:
         return None
-    brier = sum((e["conf"] / 100 - (1 if e["hit"] else 0)) ** 2 for e in entries) / len(entries)
+    brier = sum((e[key] / 100 - (1 if e["hit"] else 0)) ** 2 for e in entries) / len(entries)
     return round(100 * (1 - brier / 0.25))
 
 
@@ -53,11 +55,13 @@ def stats(entries, today=None):
         k["n"] += 1
         k["hits"] += e["hit"]
     now, before = score(entries), score(older)
+    both = [e for e in entries if e["jev"] is not None]  # bets Jev also called: a fair head-to-head
     return {
         "n": len(entries), "score": now, "hit_rate": hit_rate, "avg_conf": avg_conf,
         # positive: claims more confidence than it earns (cocky); negative: humble
         "overconfidence": avg_conf - hit_rate,
         "week_change": None if before is None else now - before,
         "buckets": buckets, "kinds": kinds,
+        "vs_jev": {"n": len(both), "jev": score(both, "jev"), "claude": score(both)} if both else None,
         "entries": entries[::-1][:12],  # newest first
     }
