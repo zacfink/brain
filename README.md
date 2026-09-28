@@ -24,6 +24,7 @@ act on them.
 - **Background agents:** anything you capture can start a headless Claude Code agent that files it or does it. [More →](#background-agents-optional)
 - **Stats:** prompts sent, sessions, subagents, tool calls, tokens and storage, with 30-day charts, read straight from Claude Code's transcripts.
 - **How well Claude knows you:** Claude logs each bet it makes about what you'll want (a recommended option, a guess, a draft), and Brain scores its calibration.
+- **Jev (optional):** with a [TypeSafe](https://typesafe.ai) key, Jev files phone captures it's sure about, and gives a second opinion on Claude's bets. [More →](#jev-optional)
 
 Everything is plain markdown on your machine. The app is a few small Python files plus one HTML file, uses only the
 standard library, has no build step, and runs on macOS, Windows and Linux.
@@ -165,6 +166,7 @@ Prompt with `set BRAIN_AGENT=codex` followed by `%USERPROFILE%\Notes\.brain\bin\
     ├── app/agents.py         background agent runner (queue, one at a time, status files)
     ├── app/sync.py           git pull/commit/push for the phone app
     ├── app/phone.py          applies phone actions on GitHub, writes phone/state.json
+    ├── app/jev.py            optional Jev calls: filing phone captures, the bet check
     ├── mobile/               the phone app (served from GitHub Pages)
     ├── build.py              regenerates INDEX.md
     ├── session_start.py      Claude Code SessionStart hook
@@ -230,6 +232,21 @@ git can't combine, it stops and says "Sync paused" instead of guessing.
 The key stays on your phone only. The app's code is public and holds no notes. You can revoke the key on GitHub
 anytime.
 <br clear="right">
+
+## Jev (optional)
+
+[Jev](https://docs.typesafe.ai) is TypeSafe's small judgment model: it answers typed questions with probabilities
+instead of writing text. Brain calls it over plain HTTP (no SDK) only when `TYPESAFE_API_KEY` is set, and does
+exactly what it did before when it isn't.
+
+- **Filing phone captures.** When the notes Action applies a phone capture, Jev picks where it belongs from your real
+  projects and people. If it's at least 70% sure, code files it: an idea goes into `ideas.md` with `(project: slug)`, a
+  todo becomes a `- [ ]` line under that project's **Open threads**, and a person note becomes a dated line under their
+  **History**. Notes, and anything Jev isn't sure of, go to the inbox for Claude as before. Add the key as a
+  `TYPESAFE_API_KEY` repository secret in your notes repo (the workflow already passes it through).
+- **A second opinion on Claude's bets.** `brain jev-bet "<bet>" [recommend|guess|draft|habit]` reads your past bets
+  in `claude/predictions.md` and prints Jev's chance you'll go along. Claude logs it at the end of the prediction line
+  (`· jev: 40%`), and the "knows you" panel scores Jev and Claude on the same bets.
 
 ## Security
 

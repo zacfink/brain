@@ -706,12 +706,14 @@ function knowsChart(p) {
 function openKnows() {
   const p = S.predictions, kindName = { recommend: "Recommended options", guess: "Guesses about you", draft: "Drafts you kept", habit: "Habit calls" };
   const kinds = Object.entries(p.kinds).map(([k, v]) => `<li>${esc(kindName[k] || k)}: ${v.hits}/${v.n} right</li>`).join("");
-  const bets = p.entries.map(e => `<li>${e.hit ? "✓" : "✗"} <b>${esc(e.conf)}%</b> ${esc(e.bet)}${e.hit ? "" : ` <span style="color:var(--dim)">→ you: ${esc(e.got)}</span>`} <span style="color:var(--dim);font:500 11px var(--mono)">${esc(e.date.slice(5))} · ${esc(e.kind)}</span></li>`).join("");
+  const bets = p.entries.map(e => `<li>${e.hit ? "✓" : "✗"} <b>${esc(e.conf)}%</b> ${esc(e.bet)}${e.hit ? "" : ` <span style="color:var(--dim)">→ you: ${esc(e.got)}</span>`} <span style="color:var(--dim);font:500 11px var(--mono)">${esc(e.date.slice(5))} · ${esc(e.kind)}${e.jev == null ? "" : ` · jev ${esc(e.jev)}%`}</span></li>`).join("");
+  const vs = p.vs_jev ? `<h2>Jev vs Claude</h2><p>On the ${p.vs_jev.n} bet${p.vs_jev.n > 1 ? "s" : ""} both called: <b>Jev ${p.vs_jev.jev}</b>, Claude ${p.vs_jev.claude}. Same scale, higher reads you better.</p>` : "";
   const change = p.week_change == null ? "" : ` · ${p.week_change >= 0 ? "+" : ""}${p.week_change} this week`;
   openPanel("How well Claude knows you", `<div class="md">
     <h1>${p.score}<span style="font-size:18px;color:var(--dim)"> / 100</span></h1>
     <p><b>${esc(knowsVerdict(p))}</b><br><span style="color:var(--dim)">${p.n} bets${change}. 100 = always sure and right; 0 = no better than a coin flip.</span></p>
     ${knowsChart(p)}
+    ${vs}
     <h2>By kind</h2><ul>${kinds}</ul>
     <h2>Latest bets</h2><ul style="list-style:none;padding-left:0">${bets}</ul>
     <p style="color:var(--dim);font-size:12px">From <code>claude/predictions.md</code>. Claude logs a line whenever it bets on what you'll want.</p></div>`);

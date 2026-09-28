@@ -71,7 +71,8 @@ the SessionStart hook asks Claude to talk it through with you and refine it.
 Claude logs a line whenever it bets on what you'll want, and marks it once you answer. Kinds: `recommend` (an option
 it marked Recommended), `guess` (a stated guess about what you meant), `draft` (something it wrote that you kept or
 rewrote), `habit` (a habit made it act and you went along or pushed back). Confidence is 50–100%. Brain turns this into
-a score and a calibration chart (the score chip in the top bar).
+a score and a calibration chart (the score chip in the top bar). Optional ` · jev: NN%` at the end is Jev's chance
+for the same bet (`brain jev-bet "<bet>" [kind]`); Brain scores Jev and Claude side by side on those bets.
 ```
 # Predictions
 

@@ -21,9 +21,64 @@ os.environ["BRAIN_AGENTS"] = "pending"
 sys.argv = sys.argv[:1]  # server.py reads its own flags from argv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402
+import jev  # noqa: E402
+
+SURE = 0.7  # ponytail: one threshold, untuned; raise it if Jev files things in the wrong place
+
+
+def section_add(text, heading, line):
+    """Put `line` first under `## heading`, adding the section at the end if the page doesn't have it."""
+    lines = text.rstrip("\n").split("\n")
+    i = next((n for n, l in enumerate(lines) if l.strip().lower() == "## " + heading.lower()), None)
+    if i is None:
+        return "\n".join(lines) + "\n\n## %s\n%s\n" % (heading, line)
+    return "\n".join(lines[:i + 1] + [line] + lines[i + 1:]) + "\n"
+
+
+def jev_file(body):
+    """File an idea, todo or person capture straight into its note when Jev is sure where it goes.
+    Returns False (and the capture goes to the inbox for Claude, as before) when Jev is off or unsure."""
+    kind, text = body.get("kind"), " ".join(str(body.get("text") or "").split())[:2000]
+    if kind not in ("idea", "todo", "person") or not text:
+        return False
+    s = server.state()
+    if kind == "person":
+        options = {os.path.basename(p["path"])[:-3]: "%s. %s" % (p["title"], p["tldr"] or "") for p in s["people"]}
+        none, what = "Someone not in this list, or not about one specific person.", "Which person is this note about?"
+    else:
+        options = {p["slug"]: "%s. %s" % (p["title"], p["meta"].get("summary") or p["tldr"] or "")
+                   for p in s["projects"] if not p["archived"]}
+        none, what = "It doesn't clearly belong to any one of these projects.", "Which project does this %s belong to?" % kind
+    if not options:
+        return False
+    try:
+        a = jev.ask({"capture": text}, {"where": {"type": "choice", "instructions": what + " (`capture`)",
+                                                   "criteria": {**options, "none": none}}})
+    except Exception:  # noqa: BLE001  Jev down or slow: Claude files it later, like before
+        return False
+    if not a or a["where"]["choice"] == "none" or a["where"]["probabilities"][a["where"]["choice"]] < SURE:
+        return False
+    slug, day = a["where"]["choice"], server.today()
+    if kind == "idea":
+        ideas = server.idea_sections(server.read("ideas.md"))
+        ideas["open"].append("%s · %s (project: %s)" % (day, text, slug))
+        server.write("ideas.md", server.render_ideas(ideas))
+    elif kind == "todo":
+        rel = "projects/%s.md" % slug
+        server.write(rel, section_add(server.read(rel), "Open threads", "- [ ] %s (from phone, %s)" % (text, day)))
+    else:
+        rel = "people/%s.md" % slug
+        server.write(rel, section_add(server.read(rel), "History", "- %s · %s" % (day, text)))
+    return True
+
+
+def capture(body):
+    if not jev_file(body):
+        server.act_capture(body)
+
 
 ACTIONS = {
-    "capture": server.act_capture,
+    "capture": capture,
     "nudge": server.act_nudge,
     "idea": server.act_idea,
     "habit": server.act_habit,

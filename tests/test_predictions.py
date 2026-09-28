@@ -20,7 +20,14 @@ class PredictionsTest(unittest.TestCase):
         e = P.parse(LOG)
         self.assertEqual(len(e), 4)
         self.assertEqual(e[3]["conf"], 50)
-        self.assertEqual(e[1], {"date": "2026-09-27", "conf": 60, "kind": "recommend", "bet": "Todos only", "got": "Everything", "hit": False})
+        self.assertEqual(e[1], {"date": "2026-09-27", "conf": 60, "kind": "recommend", "bet": "Todos only", "got": "Everything", "hit": False, "jev": None})
+
+    def test_jev_head_to_head_only_on_bets_jev_called(self):
+        e = P.parse(LOG + "- 2026-09-28 · 80% · recommend · bet: a · got: no · miss · jev: 20%\n")
+        self.assertEqual(e[-1]["jev"], 20)
+        vs = P.stats(e, today="2026-09-28")["vs_jev"]
+        self.assertEqual((vs["n"], vs["jev"], vs["claude"]), (1, 84, -156))  # Jev said no, Claude was 80% sure
+        self.assertIsNone(P.stats(P.parse(LOG))["vs_jev"])
 
     def test_score_rewards_confident_hits_and_punishes_confident_misses(self):
         self.assertEqual(P.score([{"conf": 100, "hit": True}]), 100)
