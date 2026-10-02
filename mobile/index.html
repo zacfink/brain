@@ -14,7 +14,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Bodoni+Moda:opsz,wght@6..96,700;6..96,800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&family=Bodoni+Moda:opsz,wght@6..96,700;6..96,800&display=swap" rel="stylesheet">
 <!--
   Brain on your phone (spec: docs/specs/2026-09-27-phone-app.md). This page holds no notes: it reads
   phone/state.json and notes from your private notes repo with your own GitHub key, and every change is a
@@ -88,7 +88,7 @@ button { cursor: pointer; }
 .habit .t { font-weight: 600; font-size: 14px; }
 .habit small { color: var(--dim); font: 500 11px var(--mono); }
 .sw { width: 44px; height: 26px; border-radius: 26px; background: var(--tile-3); border: 0; position: relative; flex: none; margin-top: 2px; }
-.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: transform .25s var(--ease); }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--muted); transition: transform .5s var(--spring); }
 .theme-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .sw.on { background: var(--mint); } .sw.on::after { transform: translateX(18px); background: var(--mint-ink); }
 .empty { color: var(--dim); font-size: 14px; }
@@ -149,9 +149,9 @@ input { width: 100%; background: var(--tile); border: 1px solid var(--line); bor
 @keyframes spin { to { transform: rotate(360deg); } }
 .dot.ok { animation: ping .9s ease-out; }
 @keyframes ping { from { box-shadow: 0 0 0 0 rgba(126,224,176,.7); } to { box-shadow: 0 0 0 10px rgba(126,224,176,0); } }
-.sw::after { transition: transform .3s var(--ease); transform-origin: left center; }
+.sw::after { transition: transform .5s var(--spring); transform-origin: left center; }
 .sw:active::after { transform: scaleX(1.25); } .sw.on::after { transform-origin: right center; } .sw.on:active::after { transform: translateX(18px) scaleX(1.25); }
-.toast { transition: opacity .3s var(--ease), transform .4s var(--ease); transform: translateY(16px) scale(.9); }
+.toast { transition: opacity .3s var(--ease), transform .6s var(--spring); transform: translateY(16px) scale(.9); }
 .types button[aria-pressed="true"] { animation: boop .35s var(--ease); }
 @keyframes boop { 40% { transform: scale(1.1); } }
 /* collapsible groups: tap a header; the body folds with grid-template-rows (no layout-property animation) */
@@ -213,6 +213,7 @@ button, .row, header[data-sec] { -webkit-touch-callout: none; }
   <header><button class="ib" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="p">Connect your notes</span></header>
   <form class="body" id="setForm">
     <div class="theme-row"><span>Dark mode</span><button class="sw" type="button" role="switch" id="darkSw" aria-label="Dark mode"></button></div>
+    <div class="theme-row"><span>Soft look</span><button class="sw" type="button" role="switch" id="softSw" aria-label="Soft look"></button></div>
     <p class="help">Brain on your phone reads your private notes repo on GitHub. Nothing is stored anywhere except this phone.</p>
     <label for="repo">Notes repo</label>
     <input id="repo" placeholder="your-name/notes" autocapitalize="off" autocorrect="off" spellcheck="false" required>
@@ -236,13 +237,13 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", e => {
 function setTheme(t, save = true) {
   document.documentElement.dataset.theme = t;
   if (save) try { localStorage.setItem("brain.theme", t); } catch {}
-  const sw = document.getElementById("darkSw");
-  if (sw) { sw.classList.toggle("on", t === "dark"); sw.setAttribute("aria-checked", t === "dark"); }
+  for (const [id, on] of [["darkSw", t === "dark"], ["softSw", t === "soft"]]) { const sw = document.getElementById(id); if (sw) { sw.classList.toggle("on", on); sw.setAttribute("aria-checked", on); } }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = t === "light" ? "#e6e8eb" : "#0c0d0f";
+  if (meta) meta.content = { light: "#e6e8eb", soft: "#e9e9ea" }[t] || "#0c0d0f";
 }
 setTheme(document.documentElement.dataset.theme, false);
 document.getElementById("darkSw").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+document.getElementById("softSw").onclick = () => setTheme(document.documentElement.dataset.theme === "soft" ? "light" : "soft");
 
 "use strict";
 const $ = id => document.getElementById(id);

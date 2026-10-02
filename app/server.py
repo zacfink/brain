@@ -246,10 +246,46 @@ def state():
         "sessions": session_out[:60], "inbox": inbox, "ideas": ideas["open"][::-1], "ideas_closed": {"done": len(ideas["done"]), "dismissed": len(ideas["dismissed"])},
         "notes": [slim(d) for d in docs if d["kind"] == "note" and not d["path"].startswith("people/")
                   and d["path"] not in ("me.md", "now.md", "nudges.md", "ideas.md", "inbox.md", "claude/habits.md")],
+        "internships": internships(read("internships/tracker.md")),
         "agents": AGENTS.recent(),
         "predictions": predictions.stats(predictions.parse(read("claude/predictions.md"))),
         "has": {k: k in by_path for k in ("me.md", "now.md")},
     }
+
+
+# ---------------------------------------------------------------- internships: every table row in internships/tracker.md
+def internship_group(status):
+    s = status.lower()
+    if s.startswith("applied"):
+        return "applied"
+    if s.startswith(("out", "dropped")):
+        return "out"
+    if s.startswith(("to apply", "prep")):
+        return "apply"
+    return "check"
+
+
+def internships(text):
+    """Rows from every markdown table that has a company column. Status decides the group by its first words."""
+    rows, head = [], None
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            head = None
+            continue
+        cells = [c.strip().replace("**", "") for c in line.strip().strip("|").split("|")]
+        if head is None:
+            head = [c.lower() for c in cells]
+            continue
+        if not line.strip("|-: "):
+            continue
+        r = dict(zip(head, cells))
+        if not r.get("company"):
+            continue
+        link = r.get("link", "")
+        rows.append({"company": r["company"], "role": r.get("role", ""), "term": r.get("term") or r.get("where", ""),
+                     "deadline": r.get("deadline", "").lstrip("~"), "link": link if link.startswith("http") else "",
+                     "status": r.get("status", ""), "group": internship_group(r.get("status", ""))})
+    return rows
 
 
 # ---------------------------------------------------------------- ideas: open list, then "## Done" / "## Dismissed"
