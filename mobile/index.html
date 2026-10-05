@@ -174,6 +174,29 @@ input { width: 100%; background: var(--tile); border: 1px solid var(--line); bor
 button, .row, header[data-sec] { -webkit-touch-callout: none; }
 #hap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .confetti { position: fixed; width: 7px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 40; }
+/* capture: each type has its own colour, icon and prompt; the parts rise in when the sheet opens */
+#capture { --acc: var(--amber); --acc-ink: var(--amber-ink); }
+#capture[data-type="idea"] { --acc: var(--lilac); } #capture[data-type="todo"] { --acc: var(--mint); }
+#capture[data-type="person"] { --acc: var(--sky); } #capture[data-type="habit"] { --acc: var(--rose); }
+#capture .types button[aria-pressed="true"] { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
+#capture textarea { transition: border-color .35s; } #capture textarea:focus { border-color: var(--acc); }
+#capture .go { background: var(--acc); color: var(--acc-ink); transition: transform .18s var(--ease), background-color .35s, box-shadow .35s; }
+#capture .go.ready { animation: breathe 1.8s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 50%, transparent); } 60% { box-shadow: 0 0 0 9px transparent; } }
+.cap-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--acc); color: var(--acc-ink); transition: background-color .35s; }
+.cap-ico svg { width: 16px; height: 16px; }
+#capture.on .types button, #capture.on textarea, #capture.on .go, #capture.on .help, #capture.on .spark { animation: rise .6s var(--ease) backwards; }
+#capture.on .types button:nth-child(2) { animation-delay: .04s; } #capture.on .types button:nth-child(3) { animation-delay: .08s; }
+#capture.on .types button:nth-child(4) { animation-delay: .12s; } #capture.on .types button:nth-child(5) { animation-delay: .16s; }
+#capture.on textarea { animation-delay: .14s; } #capture.on .go { animation-delay: .2s; }
+#capture.on .help { animation-delay: .26s; } #capture.on .spark { animation-delay: .3s; }
+.spark { margin: 18px 0 0; min-height: 1.5em; font: 500 12px var(--mono); color: var(--dim); transition: opacity .25s; }
+.spark b { color: var(--acc); font-weight: 500; transition: color .35s; }
+.recent h4 { margin: 18px 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.recent .r { display: flex; gap: 10px; align-items: baseline; padding: 10px 12px; margin-bottom: 6px; background: var(--tile); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; animation: rise .6s var(--ease) backwards; }
+.recent .r small { flex: none; font: 500 10.5px var(--mono); color: var(--dim); text-transform: uppercase; }
+.fly { position: fixed; z-index: 45; pointer-events: none; max-width: 70vw; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { #capture.on .types button, #capture.on textarea, #capture.on .go, #capture.on .help, #capture.on .spark, #capture .go.ready, .recent .r { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .dot.pending, .dot.ok, #main.intro > .tile, #main.intro .cover h3, .fab, .ib.spin .i, .types button[aria-pressed="true"] { animation: none; }
   .sheet, .toast, .sw::after, .pill, .ib, .go, .fab, .types button, .row { transition: none; } }
 
@@ -195,12 +218,14 @@ button, .row, header[data-sec] { -webkit-touch-callout: none; }
 <button class="fab" id="openCapture" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Capture</button>
 
 <section class="sheet" id="capture" aria-label="Capture">
-  <header><button class="ib" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="p">Capture a thought</span></header>
+  <header><button class="ib" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="p">Capture a thought</span><span class="cap-ico" id="capIcon" aria-hidden="true"></span></header>
   <div class="body">
     <div class="types" id="types"></div>
     <textarea id="capText" placeholder="What's on your mind?"></textarea>
     <button class="go" id="capGo">Save</button>
     <p class="help">It lands in your notes within about a minute, and an agent picks it up the next time your Mac is on.</p>
+    <p class="spark" id="capSpark" aria-live="polite"></p>
+    <div class="recent" id="capRecent"></div>
   </div>
 </section>
 
@@ -575,16 +600,66 @@ function open(id) { $(id).classList.add("on"); }
 function close(id) { $(id).classList.remove("on"); }
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => close(b.closest(".sheet").id));
 const TYPES = [["note", "Note"], ["idea", "Idea"], ["todo", "Todo"], ["person", "Person"], ["habit", "Habit for Claude"]];
-let capType = "note";
-function drawTypes() { $("types").innerHTML = TYPES.map(([k, l]) => `<button type="button" data-type="${k}" aria-pressed="${k === capType}">${l}</button>`).join(""); }
-$("types").onclick = e => { const b = e.target.closest("[data-type]"); if (b) { capType = b.dataset.type; drawTypes(); } };
-$("openCapture").onclick = () => { drawTypes(); open("capture"); setTimeout(() => $("capText").focus(), 350); };
+// per type: prompt, icon paths, and the rotating "Try:" sparks under the form
+const CAP = {
+  note: ["What's on your mind?", '<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/>', ["something you noticed today", "a line from class worth keeping", "what's stuck in your head"]],
+  idea: ["What's the idea?", '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>', ["a feature for Brain", "a weekend project", "something you'd build if you had a week"]],
+  todo: ["What needs doing?", '<path d="M4 12l5 5L20 6"/>', ["the thing you keep forgetting", "an email you owe someone", "what's due this week"]],
+  person: ["Who'd you meet, and what's worth remembering?", '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>', ["someone new from today", "what a friend just told you", "who to follow up with"]],
+  habit: ["What should Claude start doing?", '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>', ["something Claude got wrong today", "how you want replies to sound", "a rule Claude should always follow"]],
+};
+let capType = "note", sparkI = 0, sparkT = null;
+function drawTypes() {
+  $("types").innerHTML = TYPES.map(([k, l]) => `<button type="button" data-type="${k}">${l}</button>`).join("");
+  setType(capType, false); drawRecent();
+}
+function setType(k, anim) {
+  capType = k; $("capture").dataset.type = k;
+  const b = $("types").querySelector(`[data-type="${k}"]`);
+  $("types").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  $("capText").placeholder = CAP[k][0];
+  $("capIcon").innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${CAP[k][1]}</svg>`;
+  sparkI = 0; spark();
+  if (!anim || calm()) return;
+  $("capIcon").animate([{ transform: "rotate(-120deg) scale(.3)" }, { transform: "none" }], { duration: 550, easing: "cubic-bezier(.34,1.56,.64,1)" });
+  $("capText").animate([{ transform: "scale(.97)", opacity: .5 }, { transform: "none", opacity: 1 }], { duration: 380, easing: "cubic-bezier(.16,1,.3,1)" });
+  b.animate([{ transform: "scale(1)" }, { transform: "scale(1.12)" }, { transform: "scale(1)" }], { duration: 350, easing: "cubic-bezier(.16,1,.3,1)" });
+}
+function spark() {
+  const s = CAP[capType][2], el = $("capSpark"), set = () => { el.innerHTML = `Try: <b>${esc(s[sparkI++ % s.length])}</b>`; el.style.opacity = 1; };
+  if (calm() || !el.innerHTML) return set();
+  el.style.opacity = 0; setTimeout(set, 250);
+}
+function drawRecent() {  // last few inbox captures, newest first ("date · kind · text")
+  const items = (S?.inbox || []).slice(-3).reverse().map(l => l.split(" · "));
+  $("capRecent").innerHTML = items.length ? "<h4>Recently captured</h4>" + items.map(([, k, ...t], i) =>
+    `<div class="r" style="animation-delay:${.34 + i * .06}s"><small>${esc(t.length ? k : "")}</small><span>${esc(t.length ? t.join(" · ") : k)}</span></div>`).join("") : "";
+}
+function fly(text) {  // the saved text shrinks down into the + button
+  const from = $("capText").getBoundingClientRect(), to = $("openCapture").getBoundingClientRect(), cs = getComputedStyle($("capture"));
+  const f = document.createElement("div"); f.className = "fly"; f.textContent = text;
+  f.style.cssText += `left:${from.left + 12}px;top:${from.top + 12}px;background:${cs.getPropertyValue("--acc")};color:${cs.getPropertyValue("--acc-ink")}`;
+  document.body.appendChild(f);
+  const dx = to.left + to.width / 2 - (from.left + 12 + f.offsetWidth / 2), dy = to.top + to.height / 2 - (from.top + 12 + f.offsetHeight / 2);
+  return f.animate([{ transform: "none" }, { transform: `translate(${dx * .4}px, ${dy * .3}px) scale(.85) rotate(-4deg)`, offset: .45 },
+    { transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: .3 }], { duration: 650, easing: "cubic-bezier(.55,0,.75,.2)" }).finished.then(() => f.remove());
+}
+$("types").onclick = e => { const b = e.target.closest("[data-type]"); if (b && b.dataset.type !== capType) setType(b.dataset.type, true); };
+$("capText").oninput = () => $("capGo").classList.toggle("ready", !!$("capText").value.trim());
+$("openCapture").onclick = () => {
+  drawTypes(); open("capture"); setTimeout(() => $("capText").focus(), 350);
+  clearInterval(sparkT); sparkT = setInterval(() => $("capture").classList.contains("on") ? spark() : clearInterval(sparkT), 3800);
+};
 $("capGo").onclick = () => {
   const text = $("capText").value.trim(); if (!text) return;
   if (capType === "habit") act("habit-new", { title: text, why: "" }, "Habit proposed");
   else act("capture", { kind: capType, text }, "Captured");
-  $("capText").value = ""; close("capture");
-  setTimeout(() => confetti($("openCapture")), 250);
+  $("capText").value = ""; $("capGo").classList.remove("ready"); close("capture");
+  if (calm()) return;
+  fly(text).then(() => {
+    confetti($("openCapture"));
+    $("openCapture").animate([{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 420, easing: "cubic-bezier(.34,1.56,.64,1)" });
+  });
 };
 $("openSettings").onclick = () => { $("repo").value = cfg?.repo || ""; $("token").value = cfg?.token || ""; open("settings"); };
 $("setForm").onsubmit = async e => {
