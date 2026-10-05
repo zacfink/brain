@@ -1167,7 +1167,7 @@ $("toastUndo").onclick = () => { if (undo) { undo(); undo = null; $("toast").cla
 function celebrate(el, n = 22) {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  const colors = ["#ffb547", "#7ee0b0", "#8cc4ff", "#ff8a7a", "#c3a6ff", "#eceae4"];
+  const cs = getComputedStyle(document.documentElement), colors = ["--amber", "--mint", "--sky", "--rose", "--lilac", "--ink"].map(v => cs.getPropertyValue(v).trim());
   for (let k = 0; k < n; k++) {
     const b = document.createElement("i"); b.className = "bit"; b.style.background = colors[k % colors.length];
     b.style.left = cx + "px"; b.style.top = cy + "px"; document.body.appendChild(b);
