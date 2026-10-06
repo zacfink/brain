@@ -4,6 +4,7 @@
 Prints Claude's active habits, habits the user hasn't decided on, and anything waiting in the inbox.
 Notes folder = parent of this folder, or $BRAIN_NOTES. Silent if it isn't there, so it never blocks a session.
 """
+import datetime
 import os
 import re
 import subprocess
@@ -52,6 +53,17 @@ def context():
     name = (re.search(r"^name:\s*(\S+)", read("me.md"), re.M) or [None, "the user"])[1]
     home = NOTES.replace(os.path.expanduser("~"), "~", 1)
     lines = ["[Brain] %s is %s's brain: read %s/INDEX.md + the relevant project page before project work." % (home, name, home)]
+    today = datetime.date.today().isoformat()
+    if "## Today · " + today not in read("now.md"):
+        lines.append(
+            "MORNING UPDATE NOT DONE YET TODAY — do it FIRST, before anything else the user asks: "
+            "(1) file every inbox.md capture into its note and empty the inbox; "
+            "(2) re-check the open items in now.md 'Upcoming' and the active projects' open threads, verify each "
+            "(deploy live? reply arrived? due date passed?), tick off what's done with evidence; "
+            "(3) read all of %s's calendars for today plus deadlines in the next 3 days, then replace any old "
+            "'## Today · …' section at the top of now.md's body with '## Today · %s' (a time-ordered plan: classes, "
+            "deadlines, suggested work blocks); (4) rebuild with .brain/build.py, commit and push ~/Notes; "
+            "(5) show %s the Today plan in a few lines, then handle their message." % (name, today, name))
     if on:
         lines.append("Habits %s has on (follow them): " % name + " | ".join(on))
     if proposed:
