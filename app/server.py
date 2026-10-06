@@ -45,6 +45,18 @@ TOUCHED = set()  # notes files written since the last sync commit
 
 
 # ---------------------------------------------------------------- helpers
+
+def upcoming_items(now_body, t):
+    """Dated lines under `## Upcoming` in now.md, from today on. Only that section: Done is dated too,
+    and today's finished work isn't up next."""
+    section = re.search(r"^## Upcoming\s*\n(.*?)(?=^## |\Z)", now_body, re.M | re.S)
+    out = []
+    for line in (section.group(1) if section else "").splitlines():
+        m = re.match(r"^- (\d{4}-\d{2}-\d{2})(?: (\d{1,2}:\d{2}))? · ([^·]+?)(?: · (.+))?$", line.strip())
+        if m and m.group(1) >= t:
+            out.append({"date": m.group(1), "time": m.group(2), "title": m.group(3).strip(), "detail": m.group(4)})
+    return sorted(out, key=lambda u: (u["date"], u["time"] or "99"))  # soonest first; timed items before all-day ones
+
 def today():
     return datetime.date.today().isoformat()
 
@@ -222,12 +234,7 @@ def state():
     habits = parse_blocks(read("claude/habits.md"))
 
     now_meta, now_body = build.parse_frontmatter(read("now.md"))
-    upcoming = []
-    for line in now_body.splitlines():
-        m = re.match(r"^- (\d{4}-\d{2}-\d{2})(?: (\d{1,2}:\d{2}))? · ([^·]+?)(?: · (.+))?$", line.strip())
-        if m:
-            upcoming.append({"date": m.group(1), "time": m.group(2), "title": m.group(3).strip(), "detail": m.group(4)})
-    upcoming = [u for u in upcoming if u["date"] >= t]
+    upcoming = upcoming_items(now_body, t)
 
     me_meta, me_body = build.parse_frontmatter(read("me.md"))
     inbox = [l[2:] for l in read("inbox.md").splitlines() if l.startswith("- ")]
