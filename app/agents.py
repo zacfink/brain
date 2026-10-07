@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import threading
+import time
 
 TIMEOUT = 20 * 60
 # The whole permission boundary: --setting-sources project + dontAsk means nothing outside this list
@@ -85,7 +86,14 @@ class Agents:
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(body)
-        os.replace(tmp, path)
+        for attempt in range(20):  # Windows refuses the replace while a reader (recent()) has the file open
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                if attempt == 19:
+                    raise
+                time.sleep(0.05)
 
     def _read(self, path):
         with open(path, encoding="utf-8", errors="replace") as f:
