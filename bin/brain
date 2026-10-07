@@ -4,6 +4,7 @@
 #   brain stop      stop it
 #   brain restart   restart (after editing the app)
 #   brain log       show the server log
+#   brain jev-bet "<bet>" [kind]   Jev's chance Zac goes along (needs TYPESAFE_API_KEY)
 # Env: BRAIN_NOTES (notes folder, default: parent of the brain folder), BRAIN_PORT (default 4747)
 set -euo pipefail
 
@@ -45,6 +46,7 @@ case "${1:-}" in
   stop) stop ;;
   restart) stop; start ;;
   log) cat "$LOG" ;;
+  jev-bet) shift; exec /usr/bin/env python3 "$APP/jev.py" bet "$@" ;;
   "") start ;;
-  *) sed -n '2,7p' "$SELF"; exit 1 ;;
+  *) sed -n '2,8p' "$SELF"; exit 1 ;;
 esac

@@ -27,6 +27,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python .brain/app/phone.py .
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }} # optional: Jev files phone captures it's sure about
       - name: Commit and push
         run: |
           git config user.name "brain-bot"

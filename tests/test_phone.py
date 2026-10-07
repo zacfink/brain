@@ -37,9 +37,12 @@ def read(notes, rel):
 
 
 class ApplyQueueTest(unittest.TestCase):
-    def run_phone(self, notes):
+    def run_phone(self, notes, jev=None):
         # A fresh process each time: server.py fixes its notes folder when imported.
-        p = subprocess.run([sys.executable, os.path.join(BRAIN, "app", "phone.py"), notes], capture_output=True, text=True)
+        env = {k: v for k, v in os.environ.items() if k != "TYPESAFE_API_KEY"}  # never call the real Jev from tests
+        if jev:  # Jev's canned pick for every capture in this run: (option, probability)
+            env["BRAIN_JEV_FAKE"] = json.dumps({"where": {"type": "choice", "choice": jev[0], "probabilities": {jev[0]: jev[1]}}})
+        p = subprocess.run([sys.executable, os.path.join(BRAIN, "app", "phone.py"), notes], capture_output=True, text=True, env=env)
         self.assertEqual(p.returncode, 0, p.stderr)
         return json.loads(read(notes, "phone/state.json"))
 
@@ -70,6 +73,31 @@ class ApplyQueueTest(unittest.TestCase):
         with open(os.path.join(notes, "agents", "pending", pending[0])) as f:
             self.assertEqual(json.load(f), {"kind": "idea", "text": "Parked idea"})
         self.assertEqual([f for f in os.listdir(os.path.join(notes, "agents")) if f.endswith(".md")], [])
+
+    def test_jev_files_captures_it_is_sure_about(self):
+        notes = notes_copy()
+        queue(notes, "1", "capture", {"kind": "todo", "text": "Order a humidity sensor"})
+        self.run_phone(notes, jev=("plant-tracker", 0.9))
+        self.assertIn("## Open threads\n- [ ] Order a humidity sensor (from phone, ", read(notes, "projects/plant-tracker.md"))
+        queue(notes, "2", "capture", {"kind": "person", "text": "Wants the deck by Friday"})
+        self.run_phone(notes, jev=("priya-shah", 0.9))
+        self.assertRegex(read(notes, "people/priya-shah.md"), r"## History\n- \d{4}-\d{2}-\d{2} · Wants the deck by Friday\n")
+        queue(notes, "3", "capture", {"kind": "idea", "text": "Leaf photos as a timelapse"})
+        self.run_phone(notes, jev=("plant-tracker", 0.9))
+        self.assertIn("Leaf photos as a timelapse (project: plant-tracker)", read(notes, "ideas.md"))
+        self.assertNotIn("Order a humidity sensor", read(notes, "inbox.md"))
+        self.assertFalse(os.path.exists(os.path.join(notes, "agents", "pending")))  # filed: no agent needed
+
+    def test_jev_unsure_or_none_leaves_it_for_claude(self):
+        notes = notes_copy()
+        queue(notes, "1", "capture", {"kind": "todo", "text": "Maybe a thing"})
+        self.run_phone(notes, jev=("plant-tracker", 0.5))
+        queue(notes, "2", "capture", {"kind": "idea", "text": "Unrelated idea"})
+        self.run_phone(notes, jev=("none", 0.95))
+        inbox = read(notes, "inbox.md")
+        self.assertIn("todo · Maybe a thing", inbox)
+        self.assertIn("idea · Unrelated idea", inbox)
+        self.assertNotIn("Maybe a thing", read(notes, "projects/plant-tracker.md"))
 
     def test_a_bad_action_is_set_aside_and_the_rest_still_apply(self):
         notes = notes_copy()
