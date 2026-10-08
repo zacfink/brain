@@ -36,6 +36,40 @@ def read(notes, rel):
         return f.read()
 
 
+# Stands in for the Anthropic SDK so the ask test runs offline: replies with a capture and an answer.
+FAKE_ANTHROPIC = """
+class _B:
+    type = "text"
+    text = "INBOX: buy milk\\nNoted, milk is on your list."
+class _R:
+    stop_reason = "end_turn"
+    content = [_B()]
+class _M:
+    def create(self, **kw):
+        assert kw["model"] == "claude-opus-5-5" and "now.md" in kw["system"][0]["text"]
+        return _R()
+class _Beta:
+    messages = _M()
+class Anthropic:
+    beta = _Beta()
+"""
+
+
+class AskTest(unittest.TestCase):
+    def test_ask_answers_and_captures(self):
+        notes, fake = notes_copy(), tempfile.mkdtemp()
+        with open(os.path.join(fake, "anthropic.py"), "w") as f:
+            f.write(FAKE_ANTHROPIC)
+        queue(notes, "q1", "ask", {"id": "a1", "text": "remember to buy milk"})
+        p = subprocess.run([sys.executable, os.path.join(BRAIN, "app", "phone.py"), notes], capture_output=True, text=True,
+                           env={**os.environ, "PYTHONPATH": fake})
+        self.assertEqual(p.returncode, 0, p.stderr)
+        state = json.loads(read(notes, "phone/state.json"))
+        self.assertEqual(state["failed"], [])
+        self.assertEqual([(a["id"], a["a"]) for a in state["answers"]], [("a1", "Noted, milk is on your list.")])
+        self.assertIn("buy milk", read(notes, "inbox.md"))
+
+
 class ApplyQueueTest(unittest.TestCase):
     def run_phone(self, notes):
         # A fresh process each time: server.py fixes its notes folder when imported.

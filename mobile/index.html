@@ -95,6 +95,18 @@ button { cursor: pointer; }
 .more { background: none; border: 0; color: var(--muted); font-size: 13px; padding: 10px 0 4px; transform-origin: left center; }
 .fab { position: fixed; right: 18px; bottom: calc(env(safe-area-inset-bottom) + 18px); height: 56px; padding: 0 22px; border-radius: 28px; border: 0;
   background: var(--amber); color: var(--amber-ink); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; box-shadow: 0 12px 30px -8px rgba(0,0,0,.7); z-index: 5; }
+.mic { position: fixed; left: 18px; bottom: calc(env(safe-area-inset-bottom) + 18px); width: 56px; height: 56px; border-radius: 50%; border: 0; z-index: 6;
+  background: var(--mint); color: var(--mint-ink); display: grid; place-items: center; box-shadow: 0 12px 30px -8px rgba(0,0,0,.7);
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; animation: pop .7s var(--ease) .5s backwards; transition: transform .18s var(--ease); }
+.mic.hot { transform: scale(1.15); animation: ping 1s infinite; }
+.pop { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 88px); z-index: 6; background: var(--tile); border: 1px solid var(--line);
+  border-radius: 22px; padding: 16px 18px; box-shadow: 0 20px 50px -12px rgba(0,0,0,.7); opacity: 0; transform: translateY(16px) scale(.97); pointer-events: none;
+  transition: opacity .25s var(--ease), transform .35s var(--spring); }
+.pop.on { opacity: 1; transform: none; pointer-events: auto; }
+.pop small { display: block; font: 500 12px var(--mono); color: var(--dim); margin-bottom: 6px; }
+.pop p { margin: 0; font-size: 17px; line-height: 1.4; min-height: 1.4em; }
+.pop p.wait { color: var(--muted); animation: pulse 1.4s infinite; }
+.pop input { margin-top: 10px; }
 .sheet { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--bg); transform: translateY(100%); transition: transform .35s var(--ease); }
 .sheet.on { transform: none; }
 .sheet > header { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; border-bottom: 1px solid var(--line); }
@@ -201,8 +213,8 @@ button, .row, header[data-sec] { -webkit-touch-callout: none; }
 .recent .r small { flex: none; font: 500 10.5px var(--mono); color: var(--dim); text-transform: uppercase; }
 .fly { position: fixed; z-index: 45; pointer-events: none; max-width: 70vw; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (prefers-reduced-motion: reduce) { #capture.on .types button, #capture.on textarea, #capture.on .go, #capture.on .help, #capture.on .spark, #capture .go.ready, .recent .r { animation: none; } }
-@media (prefers-reduced-motion: reduce) { .dot.pending, .dot.ok, #main.intro > .tile, #main.intro .cover h3, .fab, .ib.spin .i, .types button[aria-pressed="true"] { animation: none; }
-  .sheet, .toast, .sw::after, .pill, .ib, .go, .fab, .types button, .row, .more { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .dot.pending, .dot.ok, #main.intro > .tile, #main.intro .cover h3, .fab, .mic, .mic.hot, .pop p.wait, .ib.spin .i, .types button[aria-pressed="true"] { animation: none; }
+  .mic, .pop, .sheet, .toast, .sw::after, .pill, .ib, .go, .fab, .types button, .row, .more { transition: none; } }
 
 </style>
 <link rel="stylesheet" href="../app/theme.css">
@@ -220,6 +232,9 @@ button, .row, header[data-sec] { -webkit-touch-callout: none; }
   <div class="sb"><div><input id="mapQ" list="mapList" placeholder="Ideas, projects, people, clusters…" autocomplete="off" autocapitalize="off" aria-label="Search your map"><datalist id="mapList"></datalist>
   <div id="mapOut"></div></div></div></section>
 <button class="fab" id="openCapture" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Capture</button>
+
+<button class="mic" id="mic" hidden aria-label="Hold to ask your notes"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+<div class="pop" id="pop" role="dialog" aria-label="Ask your notes" aria-live="polite"><small id="popQ"></small><p id="popA"></p><input id="popIn" placeholder="Ask your notes…" hidden enterkeyhint="send"></div>
 
 <section class="sheet" id="capture" aria-label="Capture">
   <header><button class="ib" data-close aria-label="Close"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="p">Capture a thought</span><span class="cap-ico" id="capIcon" aria-hidden="true"></span></header>
@@ -316,7 +331,7 @@ function act(action, body, msg) {
   const a = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, action, body, sent: false };
   outbox.push(a); store.set("outbox", outbox);
   if (S) optimistic(a, S);
-  render(); if (msg) toast(msg); flush();
+  render(); if (msg) toast(msg); flush(); return a;
 }
 let flushing = false;
 async function flush() {
@@ -358,7 +373,7 @@ function paint() {
   $("banner").innerHTML = error ? `<div class="banner">${esc(error)}</div>` : "";
 }
 function render() {
-  paint();
+  paint(); showAnswer();
   if (!S) return;
   const view = JSON.parse(JSON.stringify(S));
   outbox.forEach(a => optimistic(a, view)); // unconfirmed changes stay applied on screen
@@ -701,6 +716,41 @@ document.addEventListener("click", e => {
     const out = []; parts.forEach(p => p === ".." ? out.pop() : p && p !== "." && out.push(p)); if (/\.md$/.test(out.join("/"))) openDoc(out.join("/")); }
 });
 
+/* ---------- ask: hold the mic, talk, let go; the answer is read back ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, heard = "", asking = null; // asking = { id, queued }
+function pop(q, a, wait) { $("popQ").textContent = q; $("popA").textContent = a; $("popA").classList.toggle("wait", !!wait); $("pop").classList.add("on"); }
+function unpop() { $("pop").classList.remove("on"); $("popIn").hidden = true; speechSynthesis.cancel(); }
+function say(text) { const u = new SpeechSynthesisUtterance(text); u.lang = "en-CA"; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+function ask(text) {
+  text = text.trim();
+  if (!text) { pop("Didn't catch that", "Hold the mic and talk, then let go."); return; }
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  asking = { id, queued: act("ask", { id, text }).id };
+  pop(text, "Thinking… (about a minute)", true);
+}
+function showAnswer() {
+  if (!asking || !S) return;
+  const a = (S.answers || []).find(x => x.id === asking.id), f = (S.failed || []).find(x => x.id === asking.queued);
+  if (a) { asking = null; pop(a.q, a.a); say(a.a); }
+  else if (f) { asking = null; pop("Couldn't answer", f.error); }
+}
+$("mic").addEventListener("contextmenu", e => e.preventDefault());
+$("mic").addEventListener("pointerdown", e => {
+  e.preventDefault(); say(""); // a gesture now lets the answer speak later on iOS
+  if (!SR) { pop("Ask your notes", ""); $("popIn").hidden = false; $("popIn").value = ""; $("popIn").focus(); return; }
+  heard = ""; $("mic").classList.add("hot"); pop("Listening… let go to send", "");
+  rec = new SR(); rec.lang = "en-CA"; rec.interimResults = true; rec.continuous = true;
+  rec.onresult = ev => { heard = [...ev.results].map(r => r[0].transcript).join(""); $("popA").textContent = heard; };
+  rec.onerror = ev => { if (ev.error === "not-allowed") pop("Microphone blocked", "Allow the microphone for this site in Settings → Safari."); };
+  rec.onend = () => { if (rec) { rec = null; ask(heard); } };
+  try { rec.start(); } catch { rec = null; }
+});
+const release = () => { $("mic").classList.remove("hot"); if (rec) rec.stop(); };
+["pointerup", "pointercancel"].forEach(t => $("mic").addEventListener(t, release));
+$("popIn").addEventListener("keydown", e => { if (e.key === "Enter") { $("popIn").hidden = true; ask($("popIn").value); } });
+document.addEventListener("pointerdown", e => { if (!e.target.closest(".pop, .mic")) unpop(); });
+
 let tt;
 function toast(msg) { $("toast").textContent = msg; $("toast").classList.add("on"); clearTimeout(tt); tt = setTimeout(() => $("toast").classList.remove("on"), 2200); }
 
@@ -713,7 +763,7 @@ async function refresh(manual) {
   render();
 }
 function boot() {
-  $("openCapture").hidden = !cfg;
+  $("openCapture").hidden = $("mic").hidden = !cfg;
   if (!cfg) { $("main").innerHTML = `<section class="tile"><p>Connect your notes repo to get started.</p><button class="go" onclick="document.getElementById('openSettings').click()">Connect</button></section>`; return; }
   render(); refresh(); flush(); if (!G) loadGraph();
 }

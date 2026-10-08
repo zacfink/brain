@@ -22,7 +22,39 @@ sys.argv = sys.argv[:1]  # server.py reads its own flags from argv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import server  # noqa: E402
 
+ASK_SYSTEM = """You are Zac's notes, answering a question he spoke into his phone. The reply is read aloud.
+Answer in 1-3 short plain sentences: no markdown, lists, links or file paths. Use only the notes below; if they
+don't say, say so. If he asks you to remember or capture something, put it on a first line starting "INBOX: ",
+then confirm in one sentence."""
+
+
+def act_ask(body):
+    """Answer a spoken question from the notes and keep it in phone/answers.json (the last 20)."""
+    import anthropic  # only the Action needs it
+
+    text = " ".join(str(body.get("text") or "").split())[:2000]
+    if not text:
+        raise ValueError("empty")
+    notes = "\n\n".join("<file path=\"%s\">\n%s\n</file>" % (rel, server.read(rel) or "")
+                         for rel in ["INDEX.md", "now.md"] + sorted("projects/" + f for f in os.listdir(os.path.join(NOTES, "projects")) if f.endswith(".md")))
+    r = anthropic.Anthropic().beta.messages.create(
+        model="claude-opus-5-5", max_tokens=2000, output_config={"effort": "low"},
+        betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+        system=[{"type": "text", "text": ASK_SYSTEM + "\n\n" + notes, "cache_control": {"type": "ephemeral"}}],
+        messages=[{"role": "user", "content": text}])
+    reply = "".join(b.text for b in r.content if b.type == "text").strip() if r.stop_reason != "refusal" else "I can't answer that one."
+    if reply.startswith("INBOX: "):
+        line, _, reply = reply.partition("\n")
+        server.act_capture({"kind": "note", "text": line[7:]})
+    path = os.path.join(NOTES, "phone", "answers.json")
+    answers = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
+    answers = (answers + [{"id": body.get("id"), "q": text, "a": reply.strip(), "at": datetime.datetime.now().isoformat(timespec="seconds")}])[-20:]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(answers, f, ensure_ascii=False)
+
+
 ACTIONS = {
+    "ask": act_ask,
     "capture": server.act_capture,
     "nudge": server.act_nudge,
     "idea": server.act_idea,
@@ -59,6 +91,8 @@ def main():
     for p in state.get("projects", []):  # Mac-only details: resume commands and local folder paths
         p.pop("resume", None)
         p.pop("folders", None)
+    path = os.path.join(NOTES, "phone", "answers.json")
+    state["answers"] = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else []
     state["built"] = datetime.datetime.now().isoformat(timespec="seconds")
     state["applied"], state["failed"] = applied, failed
     with open(os.path.join(NOTES, "phone", "state.json"), "w", encoding="utf-8") as f:
