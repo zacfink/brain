@@ -189,5 +189,21 @@ class SyncTest(unittest.TestCase):
         self.assertFalse(Sync(self.mac).enabled())
 
 
+@unittest.skipUnless(shutil.which("node"), "needs node")
+class TranscriptTest(unittest.TestCase):
+    """The mic's transcript() in mobile/index.html, fed Chrome-style and iOS-style result lists."""
+    def test_joins_chrome_and_ios_results(self):
+        js = r"""
+const h = require("fs").readFileSync(process.argv[1], "utf8");
+eval(h.match(/function transcript[\s\S]*?\n}\n/)[0]);
+const R = (...ts) => ts.map(t => [{ transcript: t }]), eq = (a, b) => { if (a !== b) throw new Error(JSON.stringify(a)); };
+eq(transcript(R("can you fix", " the talking on brain")), "can you fix the talking on brain");
+eq(transcript(R("Can you fix the talking", "On brain")), "Can you fix the talking On brain");
+eq(transcript(R("Can you", "can you fix the", "Can you fix the talking on brain")), "Can you fix the talking on brain");
+eq(transcript(R("Can you fix the talking on brain", "on brain", "")), "Can you fix the talking on brain");
+"""
+        subprocess.run(["node", "-e", js, os.path.join(BRAIN, "mobile", "index.html")], check=True)
+
+
 if __name__ == "__main__":
     unittest.main()

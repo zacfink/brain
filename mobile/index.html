@@ -719,6 +719,15 @@ document.addEventListener("click", e => {
 /* ---------- ask: hold the mic, talk, let go; the answer is read back ---------- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let rec = null, heard = "", asking = null; // asking = { id, queued }
+// Chrome gives each result its own leading space; iOS gives bare pieces ("talking","On brain") and can resend
+// earlier text inside a later result, so trim, drop a piece the next one repeats, and join with spaces.
+function transcript(results) {
+  return [...results].map(r => r[0].transcript.trim()).filter(Boolean).reduce((out, t) => {
+    const last = (out[out.length - 1] || "").toLowerCase(), n = t.toLowerCase();
+    if (last && n.startsWith(last)) out[out.length - 1] = t; else if (!last.endsWith(n)) out.push(t);
+    return out;
+  }, []).join(" ");
+}
 function pop(q, a, wait) { $("popQ").textContent = q; $("popA").textContent = a; $("popA").classList.toggle("wait", !!wait); $("pop").classList.add("on"); }
 function unpop() { $("pop").classList.remove("on"); $("popIn").hidden = true; speechSynthesis.cancel(); }
 function say(text) { const u = new SpeechSynthesisUtterance(text); u.lang = "en-CA"; speechSynthesis.cancel(); speechSynthesis.speak(u); }
@@ -741,7 +750,7 @@ $("mic").addEventListener("pointerdown", e => {
   if (!SR) { pop("Ask your notes", ""); $("popIn").hidden = false; $("popIn").value = ""; $("popIn").focus(); return; }
   heard = ""; $("mic").classList.add("hot"); pop("Listening… let go to send", "");
   rec = new SR(); rec.lang = "en-CA"; rec.interimResults = true; rec.continuous = true;
-  rec.onresult = ev => { heard = [...ev.results].map(r => r[0].transcript).join(""); $("popA").textContent = heard; };
+  rec.onresult = ev => { heard = transcript(ev.results); $("popA").textContent = heard; };
   rec.onerror = ev => { if (ev.error === "not-allowed") pop("Microphone blocked", "Allow the microphone for this site in Settings → Safari."); };
   rec.onend = () => { if (rec) { rec = null; ask(heard); } };
   try { rec.start(); } catch { rec = null; }
