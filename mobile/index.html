@@ -127,6 +127,26 @@ input { width: 100%; background: var(--tile); border: 1px solid var(--line); bor
   font-weight: 600; font-size: 14px; opacity: 0; transform: translateY(10px); transition: .3s var(--ease); pointer-events: none; z-index: 30; }
 .toast.on { opacity: 1; transform: none; }
 .banner { background: color-mix(in srgb, var(--rose) 12%, transparent); border: 1px solid color-mix(in srgb, var(--rose) 35%, transparent); color: var(--rose); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 12px; }
+/* home layout: one big countdown, pill actions and two stat tiles on top; the rest sits in a lower deck */
+.hero { padding: 6px 2px 18px; }
+.hero > small { font: 500 12px var(--mono); color: var(--muted); }
+.hero .big { font: 700 54px/1 var(--sans); letter-spacing: -.04em; margin: 6px 0 4px; }
+.hero .big span { color: var(--dim); font-weight: 600; font-size: 34px; letter-spacing: -.02em; }
+.hero .sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hero .sub b { color: var(--mint); font-weight: 600; }
+.hero .acts { gap: 8px; margin-bottom: 14px; }
+.hero .acts .pill { padding: 9px 15px; font-size: 13.5px; background: var(--tile); border-color: var(--line); }
+.hero .acts .pill.solid { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat { text-align: left; background: var(--tile); border: 1px solid var(--line); border-radius: 20px; padding: 14px 14px 16px; transition: transform .18s var(--ease); }
+.stat:active { transform: scale(.96); }
+.stat small { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; }
+.stat small i { width: 7px; height: 7px; border-radius: 50%; background: var(--rose); }
+.stat:last-child small i { background: var(--lilac); }
+.stat b { display: block; font: 700 28px/1 var(--sans); letter-spacing: -.03em; margin-top: 22px; }
+.deck { --deck: #000; background: var(--deck); margin: 0 -16px calc(-1 * (env(safe-area-inset-bottom) + 96px)); padding: 18px 16px calc(env(safe-area-inset-bottom) + 110px);
+  border-radius: 30px 30px 0 0; border-top: 1px solid var(--line); min-height: 60vh; }
+html[data-theme="light"] .deck, html[data-theme="soft"] .deck { --deck: #1d1d1f; border-top: 0; }
 /* note reader */
 .md h1 { font: 800 30px/1.05 var(--display); margin: 0 0 12px; }
 .md h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--amber); margin: 26px 0 8px; }
@@ -227,10 +247,13 @@ button, .row, header[data-sec] { -webkit-touch-callout: none; }
   <button class="ib" id="openSettings" aria-label="Settings"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15.1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
 </div>
 <div id="banner"></div>
+<div id="hero"></div>
+<div class="deck">
 <main id="main"><div class="tile empty">Loading…</div></main>
 <section class="tile" id="mapTile" hidden><header data-sec="map" role="button" aria-expanded="true"><h2>Search your map</h2><span class="n" id="mapCount"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></header>
   <div class="sb"><div><input id="mapQ" list="mapList" placeholder="Ideas, projects, people, clusters…" autocomplete="off" autocapitalize="off" aria-label="Search your map"><datalist id="mapList"></datalist>
   <div id="mapOut"></div></div></div></section>
+</div>
 <button class="fab" id="openCapture" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Capture</button>
 
 <button class="mic" id="mic" hidden aria-label="Hold to ask your notes"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
@@ -384,6 +407,13 @@ function render() {
   const open = view.nudges.filter(x => x.status === "open" || (x.status === "snoozed" && x.snooze_until && x.snooze_until <= t));
   const projects = view.projects.filter(p => !p.archived && ["active", "paused"].includes(p.meta.status));
   const habits = view.habits;
+  const nx = up[0], dn = nx ? daysFrom(nx.date) : null;
+  $("hero").innerHTML = `<section class="hero">
+    <small>${nx ? "Next up · " + esc(new Date(nx.date + "T00:00").toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" })) : "Nothing scheduled"}</small>
+    <div class="big">${dn === null ? "Clear" : dn === 0 ? "Today" : dn === 1 ? "Tmrw" : `${dn}<span> days</span>`}</div>
+    <p class="sub">${nx ? esc(nx.title) : "No upcoming items in now.md."}</p>
+    <div class="acts"><button class="pill solid" data-go="capture">+ Capture</button><button class="pill" data-go="next">Agenda</button><button class="pill" data-go="projects">Projects</button><button class="pill" data-go="map">Map</button></div>
+    <div class="stats"><button class="stat" data-go="nudges"><small><i></i>Notes to self</small><b>${open.length}</b></button><button class="stat" data-go="ideas"><small><i></i>Ideas open</small><b>${view.ideas.length}</b></button></div></section>`;
   const html = `
     ${n.headline ? `<section class="tile cover"><small>ISSUE ${esc(view.issue)} · ${esc((n.updated || "").slice(5))}</small><h3>${esc(n.headline).replace(/\*([^*]+)\*/g, "<em>$1</em>")}</h3>${n.dek ? `<p>${esc(n.dek)}</p>` : ""}</section>` : ""}
     ${sec("next", "Up next", "", `${up.length ? up.map(u => { const dd = daysFrom(u.date); return `<div class="next"><div><b>${esc(u.date.slice(8))}</b><small>${dd === 0 ? "today" : dd === 1 ? "tmrw" : esc(new Date(u.date + "T00:00").toLocaleDateString("en", { weekday: "short" }))}${u.time ? " " + esc(u.time) : ""}</small></div>
@@ -729,6 +759,13 @@ function transcript(results) {
   }, []).join(" ");
 }
 function pop(q, a, wait) { $("popQ").textContent = q; $("popA").textContent = a; $("popA").classList.toggle("wait", !!wait); $("pop").classList.add("on"); }
+$("hero").addEventListener("click", e => {
+  const b = e.target.closest("[data-go]"); if (!b) return; tap();
+  if (b.dataset.go === "capture") return $("openCapture").click();
+  const h = document.querySelector(`header[data-sec="${b.dataset.go}"]`); if (!h || h.closest("[hidden]")) return;
+  if (folded.has(b.dataset.go)) fold(h);
+  h.closest(".tile").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 function unpop() { $("pop").classList.remove("on"); $("popIn").hidden = true; speechSynthesis.cancel(); }
 function say(text) { const u = new SpeechSynthesisUtterance(text); u.lang = "en-CA"; speechSynthesis.cancel(); speechSynthesis.speak(u); }
 function ask(text) {
