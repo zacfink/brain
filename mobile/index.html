@@ -137,13 +137,14 @@ input { width: 100%; background: var(--tile); border: 1px solid var(--line); bor
 .hero .acts { gap: 8px; margin-bottom: 14px; }
 .hero .acts .pill { padding: 9px 15px; font-size: 13.5px; background: var(--tile); border-color: var(--line); }
 .hero .acts .pill.solid { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .stat { text-align: left; background: var(--tile); border: 1px solid var(--line); border-radius: 20px; padding: 14px 14px 16px; transition: transform .18s var(--ease); }
 .stat:active { transform: scale(.96); }
 .stat small { display: flex; gap: 6px; align-items: center; color: var(--muted); font-size: 12.5px; }
 .stat small i { width: 7px; height: 7px; border-radius: 50%; background: var(--rose); }
 .stat:last-child small i { background: var(--lilac); }
-.stat b { display: block; font: 700 28px/1 var(--sans); letter-spacing: -.03em; margin-top: 22px; }
+.stat b { display: block; font: 700 28px/1 var(--sans); letter-spacing: -.03em; margin-top: 12px; }
+.stat em { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 6px; font: 500 12.5px/1.35 var(--sans); color: var(--muted); }
 .deck { --deck: #000; background: var(--deck); margin: 0 -16px calc(-1 * (env(safe-area-inset-bottom) + 96px)); padding: 18px 16px calc(env(safe-area-inset-bottom) + 110px);
   border-radius: 30px 30px 0 0; border-top: 1px solid var(--line); min-height: 60vh; }
 html[data-theme="light"] .deck, html[data-theme="soft"] .deck { --deck: #1d1d1f; border-top: 0; }
@@ -413,11 +414,11 @@ function render() {
     <div class="big">${dn === null ? "Clear" : dn === 0 ? "Today" : dn === 1 ? "Tmrw" : `${dn}<span> days</span>`}</div>
     <p class="sub">${nx ? esc(nx.title) : "No upcoming items in now.md."}</p>
     <div class="acts"><button class="pill solid" data-go="capture">+ Capture</button><button class="pill" data-go="next">Agenda</button><button class="pill" data-go="projects">Projects</button><button class="pill" data-go="map">Map</button></div>
-    <div class="stats"><button class="stat" data-go="nudges"><small><i></i>Notes to self</small><b>${open.length}</b></button><button class="stat" data-go="ideas"><small><i></i>Ideas open</small><b>${view.ideas.length}</b></button></div></section>`;
+    <div class="stats"><button class="stat" data-go="nudges"><small><i></i>Notes to self</small><b>${open.length}</b>${open[0] ? `<em>${esc(open[0].title)}</em>` : ""}</button><button class="stat" data-go="ideas"><small><i></i>Ideas open</small><b>${view.ideas.length}</b>${view.ideas[0] ? `<em>${esc(view.ideas[0].replace(/^\d{4}-\d{2}-\d{2} · /, "").replace(/ \(project: [\w-]+\)$/, ""))}</em>` : ""}</button></div></section>`;
   const html = `
     ${n.headline ? `<section class="tile cover"><small>ISSUE ${esc(view.issue)} · ${esc((n.updated || "").slice(5))}</small><h3>${esc(n.headline).replace(/\*([^*]+)\*/g, "<em>$1</em>")}</h3>${n.dek ? `<p>${esc(n.dek)}</p>` : ""}</section>` : ""}
-    ${sec("next", "Up next", "", `${up.length ? up.map(u => { const dd = daysFrom(u.date); return `<div class="next"><div><b>${esc(u.date.slice(8))}</b><small>${dd === 0 ? "today" : dd === 1 ? "tmrw" : esc(new Date(u.date + "T00:00").toLocaleDateString("en", { weekday: "short" }))}${u.time ? " " + esc(u.time) : ""}</small></div>
-        <div><div class="t">${esc(u.title)}</div>${u.detail ? `<div class="d">${esc(u.detail)}</div>` : ""}</div></div>`; }).join("") : `<div class="empty">Nothing coming up.</div>`}`)}
+    ${sec("next", "Up next", "", `${up.length > 1 ? up.slice(1).map(u => { const dd = daysFrom(u.date); return `<div class="next"><div><b>${esc(u.date.slice(8))}</b><small>${dd === 0 ? "today" : dd === 1 ? "tmrw" : esc(new Date(u.date + "T00:00").toLocaleDateString("en", { weekday: "short" }))}${u.time ? " " + esc(u.time) : ""}</small></div>
+        <div><div class="t">${esc(u.title)}</div>${u.detail ? `<div class="d">${esc(u.detail)}</div>` : ""}</div></div>`; }).join("") : `<div class="empty">Nothing else coming up.</div>`}`)}
     ${sec("nudges", "Notes to self", open.length ? open.length + " open" : "", `${open.length ? open.map(x => { const dd = x.due ? daysFrom(x.due) : null; const due = dd === null ? "" : dd < 0 ? `${-dd}d overdue` : dd === 0 ? "today" : `in ${dd}d`;
         return `<div class="nudge"><h4>${esc(x.title)}${due ? `<span class="due">${due}</span>` : ""}</h4>${x.why ? `<p data-expand>${esc(x.why)}</p>` : ""}
         <div class="acts"><button class="pill yes" data-nudge="${esc(x.id)}" data-a="done">Done</button><button class="pill" data-nudge="${esc(x.id)}" data-a="snooze" data-days="1">Tomorrow</button>
