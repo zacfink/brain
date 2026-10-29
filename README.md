@@ -2,9 +2,14 @@
 
 [![tests](https://github.com/zacfink/brain/actions/workflows/tests.yml/badge.svg)](https://github.com/zacfink/brain/actions/workflows/tests.yml)
 
-A personal "digital brain" for working with [Claude Code](https://claude.com/claude-code): a folder of plain
-markdown notes that Claude reads instead of re-deriving context every session, plus a small local app to browse and
-act on them.
+**A shared space for you and your AI.** Plain markdown notes that you and your agent both read and write, so it
+stops re-deriving who you are every session, plus a board to see what it's doing, what it learned about you and
+what's next.
+
+Works with [Claude Code](https://claude.com/claude-code) and [Codex](https://github.com/openai/codex): both get your
+notes at the start of every session ([Claude Code](#connect-claude-code) through a hook, [Codex](#connect-codex)
+through `AGENTS.md`), and either can run the [background agents](#background-agents-optional). The notes are plain
+files, so any other agent that can read a folder can use them too; the stats and routines tiles are Claude Code only.
 
 ![Brain app running on the example notes](docs/screenshot.png)
 
@@ -92,7 +97,7 @@ design plugin for UI work. Brain is the glue: it's where the habits, the specs a
 - **Already keep notes somewhere** (an Obsidian vault, a Notion or Apple Notes export, a folder of markdown): skip to
   [From the notes you already have](#from-the-notes-you-already-have). Claude reads them instead of interviewing you.
 
-New to Brain? Paste this into [Claude Code](https://claude.com/claude-code) and answer its questions. It does every
+New to Brain? Paste this into [Claude Code](https://claude.com/claude-code) or [Codex](https://github.com/openai/codex) and answer its questions. It does every
 step below for you and ends by giving you a link to open on your phone.
 
 ```text
@@ -106,8 +111,9 @@ each step is for in one line, and ask me before anything that touches my account
    weeks. Then write my first notes in the FORMATS.md shapes: me.md, now.md, one page per project, people pages,
    nudges.md, ideas.md, inbox.md and claude/habits.md (two or three habits from what I told you, status "proposed").
    If you can see my projects folder, calendar or email, use them to fill gaps, and say what you took from where.
-3. Connect yourself: add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite),
-   and add the README's standing instructions to my CLAUDE.md. Then run python3 ~/Notes/.brain/build.py.
+3. Connect yourself: if you're Claude Code, add the SessionStart hook from the README to ~/.claude/settings.json
+   (merge, don't overwrite) and the README's standing instructions to my CLAUDE.md; if you're Codex, run
+   python3 ~/Notes/.brain/codex.py. Then run python3 ~/Notes/.brain/build.py.
 4. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as
    an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 5. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh,
@@ -142,8 +148,9 @@ tell me what each step is for in one line, and ask me before anything that touch
    people pages, nudges.md, ideas.md, inbox.md and claude/habits.md (two or three habits, status "proposed").
    After each fact, note which original file it came from. Leave out anything that looks private (passwords,
    health, money) unless I say to include it. Show me the list of pages before writing them.
-5. Connect yourself: add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite),
-   and add the README's standing instructions to my CLAUDE.md. Then run python3 ~/Notes/.brain/build.py.
+5. Connect yourself: if you're Claude Code, add the SessionStart hook from the README to ~/.claude/settings.json
+   (merge, don't overwrite) and the README's standing instructions to my CLAUDE.md; if you're Codex, run
+   python3 ~/Notes/.brain/codex.py. Then run python3 ~/Notes/.brain/build.py.
 6. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as
    an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 7. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh,

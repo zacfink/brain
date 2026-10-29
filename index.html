@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Brain — a digital brain for Claude Code</title>
-<meta name="description" content="A folder of plain markdown notes that Claude Code reads every session, plus a small app for your Mac, browser and phone.">
+<title>Brain — a shared space for you and your AI</title>
+<meta name="description" content="Plain markdown notes you and your AI agent both read and write, plus a board to see what it's doing, what it learned about you and what's next. Works with Claude Code and Codex.">
 <link rel="icon" href="mobile/icon-192.png">
 <link rel="apple-touch-icon" href="mobile/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,10 +50,12 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
 <body>
 <main>
   <h1>Brain<span class="dot">.</span></h1>
-  <p class="lede">A folder of plain markdown notes that Claude Code reads every session, so it stops re-deriving who you are and what you're working on. Plus a small app to browse and act on them, on your Mac, in the browser and on your phone.</p>
+  <p class="lede"><b>A shared space for you and your AI.</b> Plain markdown notes that you and your agent both read and write, plus a board to see what it's doing, what it learned about you and what's next. On your Mac, in the browser and on your phone.</p>
+  <p class="small">Works with Claude Code and Codex. The notes are plain files, so any agent that can read a folder can use them.</p>
   <div class="actions">
     <a class="btn primary" href="#setup">Set it up with one prompt</a>
     <a class="btn" href="https://github.com/zacfink/brain/releases/latest">Download the latest release</a>
+    <span class="small">Mac app: built for you during setup</span>
     <a class="small" href="https://github.com/zacfink/brain">Source on GitHub</a>
   </div>
   <img class="shot" src="docs/screenshot.png" alt="Brain app running on the example notes">
@@ -69,7 +71,7 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
   </div>
 
   <h2 id="setup">Set it up with one prompt</h2>
-  <p class="small">Paste one of these into <a href="https://claude.com/claude-code">Claude Code</a> and answer its questions. It asks before anything that touches your accounts.</p>
+  <p class="small">Paste one of these into <a href="https://claude.com/claude-code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex</a> and answer its questions. It asks before anything that touches your accounts.</p>
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected="true" aria-controls="p-fresh" id="t-fresh">Starting fresh</button>
     <button role="tab" aria-selected="false" aria-controls="p-notes" id="t-notes">Already keep notes</button>
@@ -80,7 +82,7 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
 
 1. Clone https://github.com/zacfink/brain.git into ~/Notes/.brain (keep anything already in ~/Notes), link ~/Notes/.brain/bin/brain into ~/.local/bin (create it, and add it to my shell profile's PATH if it isn't there), and read ~/Notes/.brain/README.md and FORMATS.md before going on.
 2. Interview me briefly: my name, what I do, my active projects, people I work with, anything due in the next two weeks. Then write my first notes in the FORMATS.md shapes: me.md, now.md, one page per project, people pages, nudges.md, ideas.md, inbox.md and claude/habits.md (two or three habits from what I told you, status "proposed"). If you can see my projects folder, calendar or email, use them to fill gaps, and say what you took from where.
-3. Connect yourself: add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite), and add the README's standing instructions to my CLAUDE.md. Then run python3 ~/Notes/.brain/build.py.
+3. Connect yourself: if you're Claude Code, add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite) and the README's standing instructions to my CLAUDE.md; if you're Codex, run python3 ~/Notes/.brain/codex.py. Then run python3 ~/Notes/.brain/build.py.
 4. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 5. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh, add docs/notes-workflow.yml as .github/workflows/brain.yml plus phone/queue/.gitkeep, commit and push, and wait for the Action's first run to write phone/state.json.
 6. Walk me through making the phone key (README → On your phone, step 3); I paste it to you. Then give me my one-tap install link: https://zacfink.github.io/brain/mobile/#c= followed by base64 of {"repo":"&lt;me&gt;/notes","token":"&lt;key&gt;"}. Tell me to open it in Safari, tap Share → Add to Home Screen, and treat the link like a password. Don't save the key anywhere.
@@ -95,7 +97,7 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
 2. Clone https://github.com/zacfink/brain.git into ~/Notes/.brain (keep anything already in ~/Notes), link ~/Notes/.brain/bin/brain into ~/.local/bin (create it, and add it to my shell profile's PATH if it isn't there), and read ~/Notes/.brain/README.md and FORMATS.md before going on.
 3. Skim my existing notes and tell me in a few lines what you found: active projects, people, anything due soon, recurring themes. Ask me at most 3 short questions to fill gaps.
 4. Draft my Brain notes in the FORMATS.md shapes from what you found: me.md, now.md, one page per active project, people pages, nudges.md, ideas.md, inbox.md and claude/habits.md (two or three habits, status "proposed"). After each fact, note which original file it came from. Leave out anything that looks private (passwords, health, money) unless I say to include it. Show me the list of pages before writing them.
-5. Connect yourself: add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite), and add the README's standing instructions to my CLAUDE.md. Then run python3 ~/Notes/.brain/build.py.
+5. Connect yourself: if you're Claude Code, add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite) and the README's standing instructions to my CLAUDE.md; if you're Codex, run python3 ~/Notes/.brain/codex.py. Then run python3 ~/Notes/.brain/build.py.
 6. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 7. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh, add docs/notes-workflow.yml as .github/workflows/brain.yml plus phone/queue/.gitkeep, commit and push, and wait for the Action's first run to write phone/state.json. Then walk me through the phone key (README → On your phone, step 3) and give me my one-tap install link, as in the from-scratch setup. Don't save the key anywhere.
 8. Finish with a short list: what's set up, what came from which of my old notes, what I should try first, and anything that didn't work.</pre>
