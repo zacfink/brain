@@ -33,6 +33,12 @@ NUDGES = """## N-001 · Later thing
 """
 
 
+class DuplicateIds(unittest.TestCase):
+    def test_flags_only_repeated_ids(self):
+        self.assertEqual(session_start.duplicate_ids(NUDGES), [])
+        self.assertEqual(session_start.duplicate_ids(NUDGES + "\n## N-002 · Clash\n- status: open\n"), ["N-002"])
+
+
 class RankedNudges(unittest.TestCase):
     def test_most_overdue_first_skips_closed_and_live_snoozes(self):
         self.assertEqual(session_start.ranked_nudges(NUDGES, "2026-10-18"), [

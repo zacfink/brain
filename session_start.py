@@ -77,6 +77,10 @@ def context():
     if inbox:
         lines.append("Inbox has %d capture(s) from the app — file each into the right note, then delete it from inbox.md:" % len(inbox))
         lines += ["  - " + i for i in inbox[:15]]
+    dupes = duplicate_ids(read("nudges.md"))
+    if dupes:
+        lines.append("Duplicate nudge IDs in nudges.md (two writers picked the same number): %s. "
+                     "Renumber the newer one to the next free N-xxx before anything else." % ", ".join(dupes))
     ranked = ranked_nudges(read("nudges.md"), today)
     if ranked:
         lines.append("Open nudges, most overdue first (the top one is the biggest gap; raise it with %s early): " % name
@@ -91,6 +95,12 @@ def context():
     if cal:
         lines.append(cal)
     return "\n".join(lines)
+
+
+def duplicate_ids(text):
+    """IDs used by more than one `## N-xxx` heading."""
+    ids = re.findall(r"^## (N-\d+) · ", text, re.M)
+    return sorted({i for i in ids if ids.count(i) > 1})
 
 
 def ranked_nudges(text, today):
