@@ -401,14 +401,19 @@ a.it-row:hover { background: var(--tile-2); }
 /* ---------- front page layout: the cover as the page's headline, one Today list (notes to self + Up next), the other tiles in a rail ---------- */
 .fp { display: none; max-width: 1240px; margin: 0 auto; }
 body.front .fp { display: block; }
-/* the ribbon: a thin glossy band across the very top, in the colour of the headline's italic */
-body.front::before { content: ""; position: fixed; inset: 0 0 auto; height: 4px; z-index: 30; pointer-events: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--cover-solid) 40%, white), transparent 80%),
-    linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--cover-solid) 30%, white) 50%, transparent 65%) -150% 0 / 60% 100% no-repeat,
-    linear-gradient(90deg, var(--accent), var(--cover-solid) 50%, var(--accent));
-  box-shadow: 0 1px 10px color-mix(in srgb, var(--accent) 45%, transparent); animation: sheen 7s ease-in-out infinite; }
-@keyframes sheen { 0%, 55% { background-position: 0 0, -150% 0, 0 0; } 100% { background-position: 0 0, 250% 0, 0 0; } }
-.fp-lead { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 48px; align-items: end; padding: 14px 0 34px; border-bottom: 1px solid var(--line); }
+/* the ribbon: no line, a soft glow in the cover colour around the cover block; a brighter patch of it drifts around the edge */
+@property --rib-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.rib { position: relative; isolation: isolate; border-radius: 18px; padding: 26px 30px 28px; box-shadow: 0 0 28px -6px color-mix(in srgb, var(--cover-solid) 28%, transparent); }
+.rib::before, .rib::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; }
+.rib::before { inset: -2px; filter: blur(16px); opacity: .3; animation: rib-spin 9s linear infinite;
+  background: conic-gradient(from var(--rib-a), color-mix(in srgb, var(--cover-solid) 30%, transparent) 0 15%, var(--cover-solid) 25%, color-mix(in srgb, var(--cover-solid) 30%, transparent) 35% 100%); }
+.rib::after { background: var(--bg); }
+@keyframes rib-spin { to { --rib-a: 360deg; } }
+/* light themes: a soft warm shadow, not a glow */
+[data-tone="light"] .rib { box-shadow: 0 8px 28px -10px color-mix(in srgb, var(--cover-solid) 40%, transparent), 0 1px 3px color-mix(in srgb, var(--cover-solid) 12%, transparent); }
+[data-tone="light"] .rib::before { opacity: .16; }
+[data-family="swiss"] .rib { border-radius: 0; }
+.fp-lead { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 48px; align-items: end; padding: 40px 0 40px; border-bottom: 1px solid var(--line); }
 .fp-kick { font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .fp-hl { font: 800 clamp(40px, 5.2vw, 76px)/1 var(--display); letter-spacing: -.02em; margin: 14px 0 0; max-width: 17ch; text-wrap: balance; }
 .fp-hl em { font-style: italic; font-weight: 600; color: var(--accent); }
@@ -436,7 +441,7 @@ body.front::before { content: ""; position: fixed; inset: 0 0 auto; height: 4px;
 .fp-empty { color: var(--muted); margin-top: 18px; }
 .fp-rail .board { max-width: none; }
 @media (max-width: 900px) { .fp-lead, .fp-cols { grid-template-columns: 1fr; gap: 24px; } }
-@media (prefers-reduced-motion: reduce) { body.front::before { animation: none; } .fp-next, .fp-check, .fp-item { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rib::before { animation: none; } .fp-next, .fp-check, .fp-item { transition: none; } }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -854,7 +859,7 @@ function renderFront() {
   if (layout !== "front" || !S) return;
   const n = S.now, proj = S.projects.find(p => p.slug === n.project), hid = new Set(S.hidden || []), nx = hid.has("next") ? null : BT.nextUp(S);
   const dayName = d => { const k = daysFrom(d); return k < 0 ? "Overdue" : k === 0 ? "Today" : k === 1 ? "Tomorrow" : new Date(d + "T12:00:00").toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" }); };
-  $("fpLead").innerHTML = `<div><div class="fp-kick">${proj ? esc(proj.title) + " · " : ""}Issue ${esc(S.issue)}</div>
+  $("fpLead").innerHTML = `<div class="rib"><div class="fp-kick">${proj ? esc(proj.title) + " · " : ""}Issue ${esc(S.issue)}</div>
     <h2 class="fp-hl">${n.headline ? esc(n.headline).replace(/\*(.+?)\*/g, "<em>$1</em>") : "Nothing on the cover yet."}</h2>
     <p class="fp-dek">${n.headline ? esc(n.dek || "") : "Claude writes the headline in <code>now.md</code> after real work."}</p>
     <div class="fp-acts">${proj ? reopenButtons(proj, { big: true }) + `<button class="pill ghost" data-open="${esc(proj.path)}">${I.note}Project page</button>` : ""}</div></div>`
