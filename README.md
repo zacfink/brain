@@ -14,6 +14,7 @@ files, so any other agent that can read a folder can use them too; the stats and
 ![Brain app running on the example notes](docs/screenshot.png)
 
 - **Cover story:** Claude writes a magazine-style headline about your week after real work.
+- **Front page:** the cover story leads as the page's headline, notes to self and Up next share one Today list grouped by day, and the other tiles sit in a rail beside it (on the phone, below it). Settings → Layout switches to Tiles or Scroll.
 - **Notes to self:** reminders Claude adds only when they help. You can mark them Done (with confetti), snooze them, or say "Not doing this", which retires them for good.
 - **Projects:** hide the ones you're not working on; they wait under "Show hidden".
 - **How Claude adapts to you:** habits Claude follows every session. Claude can *propose* a new one, and you switch each on or off. You can also brainstorm a habit in the app, and Claude talks it through with you next session. Past habits stay out of the way.

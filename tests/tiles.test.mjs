@@ -171,3 +171,9 @@ test("how well Claude knows you only gets the small shape", () => {
   const k = T.items({ predictions: { n: 40, score: -6, avg_conf: 63, hit_rate: 39 } }, { today }).find(i => i.key === "knows");
   for (const cols of [12, 10, 8]) assert.deepEqual(T.templates(k, 5, cols, 100).map(t => t[0].c), [2]);
 });
+
+test("noHero: the front page rail never gets a hero piece", () => {
+  const rail = its.filter(i => !["cover", "next", "nudges"].includes(i.key));
+  for (const cols of [4, 12]) assert.ok(T.solve(rail, cols, 80, { noHero: true }).every(b => b.parts.every(q => q.role !== "hero")), `cols ${cols}`);
+  assert.ok(T.solve(rail, 12, 80, {}).some(b => b.parts.some(q => q.role === "hero")));
+});

@@ -332,6 +332,37 @@ body.tiles .fab { width: 56px; padding: 0; justify-content: center; font-size: 0
 @media (prefers-reduced-motion: reduce) { #page, #page > header, #pageStrip, #pageUi, #board, #top, .island, .ilist, .nx, .sts button { transition: none; } .island.work i { animation: none; }
   .pt { opacity: 1; transform: none; transition: none; } }
 
+/* Front page layout (default): the cover headline leads, then Next, then one Today list (notes to self + Up next), then the other tiles. Same idea as the Mac. */
+/* the ribbon: no line, a soft glow in the cover colour around the cover block; a brighter patch of it drifts around the edge */
+@property --rib-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.rib { position: relative; isolation: isolate; border-radius: 18px; padding: 26px 30px 28px; box-shadow: 0 0 28px -6px color-mix(in srgb, var(--cover-solid) 28%, transparent); }
+.rib::before, .rib::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; border-radius: inherit; }
+.rib::before { inset: -2px; filter: blur(16px); opacity: .3; animation: rib-spin 9s linear infinite;
+  background: conic-gradient(from var(--rib-a), color-mix(in srgb, var(--cover-solid) 30%, transparent) 0 15%, var(--cover-solid) 25%, color-mix(in srgb, var(--cover-solid) 30%, transparent) 35% 100%); }
+.rib::after { background: var(--bg); }
+@keyframes rib-spin { to { --rib-a: 360deg; } }
+/* light themes: a soft warm shadow, not a glow */
+[data-tone="light"] .rib { box-shadow: 0 8px 28px -10px color-mix(in srgb, var(--cover-solid) 40%, transparent), 0 1px 3px color-mix(in srgb, var(--cover-solid) 12%, transparent); }
+[data-tone="light"] .rib::before { opacity: .16; }
+[data-family="swiss"] .rib { border-radius: 0; }
+.rib { margin: 10px 0 18px; padding: 18px 18px 20px; } .rib .fp-kick { margin-top: 0; } .rib .hl.fp-hl { margin-bottom: 8px; } .rib .fp-dek { margin-bottom: 0; }
+.fp-kick { margin: 10px 2px 0; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.hl.fp-hl { display: block; -webkit-line-clamp: unset; margin: 6px 2px 10px; font: 800 34px/1.02 var(--display); letter-spacing: -.015em; }
+.fp-hl em { font-style: italic; color: var(--accent); }
+.fp-dek { margin: 0 2px 16px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.fp-h { display: flex; gap: 8px; margin: 22px 2px 0; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fp-h span { color: var(--dim); }
+.fp-day { margin: 18px 2px 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.fp-item { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.fp-check { flex: none; width: 36px; height: 36px; margin: -7px 4px 0 -6px; padding: 0; border: 0; background: none; display: grid; place-items: center; transition: transform .18s var(--ease), background-color .2s, color .2s; }
+.fp-check::after { content: ""; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; border: 1.6px solid var(--accent); }
+.fp-check:active { transform: scale(.92); }
+.fp-time { flex: none; width: 36px; padding-top: 2px; font: 500 12px var(--mono); color: var(--muted); }
+.fp-t { flex: 1; min-width: 0; } .fp-t b { font-size: 15.5px; font-weight: 600; } .fp-t p { margin: 3px 0 0; font-size: 14px; color: var(--muted); }
+.fp-t .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fp-empty { margin: 14px 2px 0; color: var(--muted); }
+body.front #board { margin-top: 22px; }
+@media (prefers-reduced-motion: reduce) { .rib::before { animation: none; } .fp-check { transition: none; } }
 </style>
 <link rel="stylesheet" href="../app/theme.css">
 <script src="../app/theme.js"></script>
@@ -549,7 +580,7 @@ function render() {
   if (!S) return;
   const view = JSON.parse(JSON.stringify(S)), tiles = tilesOn();
   outbox.forEach(a => optimistic(a, view)); // unconfirmed changes stay applied on screen
-  document.body.classList.toggle("tiles", tiles); island(view);
+  document.body.classList.toggle("tiles", tiles); document.body.classList.toggle("front", tiles && layout === "front"); island(view);
   const h = new Date().getHours(), name = ((view.me?.meta?.name) || "").split(/\s+/)[0];
   const t = today(), n = view.now || {};
   const hm = new Date().toTimeString().slice(0, 5);  // a timed item from earlier today has passed
@@ -614,17 +645,38 @@ function render() {
 
 /* ---------- adaptive tiles: app/tiles.js scores the sections; home lays them out two to a row and a tapped one grows into its section ---------- */
 const BT = window.BrainTiles, SEC_OF = { next: "next", people: "people", intern: "intern", nudges: "nudges", agents: "agents", routines: "routines", projects: "projects", ideas: "ideas", streak: "sessions", habits: "habits", knows: "knows" };
-let layout = store.get("layout", "tiles"), coverLen = store.get("cover", "medium"), order = null, lastBoard = "", reflow = true, pageKey = null, pageFrom = null, ITEMS = {}, hiddenAt = Date.now(), NEXT = null;
-const tilesOn = () => layout === "tiles" && !!BT && !!S;
+let layout = store.get("layout", "front"), coverLen = store.get("cover", "medium"), order = null, lastBoard = "", reflow = true, pageKey = null, pageFrom = null, ITEMS = {}, hiddenAt = Date.now(), NEXT = null;
+const tilesOn = () => (layout === "tiles" || layout === "front") && !!BT && !!S;
 // Top of home: the next thing ahead with a live countdown, the cover headline (tap for the cover), four counts.
 function home(view, late, nToday) {
   const noNext = hidden.has("next") || !ITEMS.next, nx = NEXT = noNext ? null : BT.nextUp(view), n = view.now || {}, num = (id, v, l, k) => `<button class="tile" data-k="${k}"><b data-n="${v}" data-id="${id}">${esc(v)}</b>${l}</button>`;
   const dn = nx && daysFrom(nx.date), day = nx && (dn === 0 ? "Today" : dn === 1 ? "Tmrw" : new Date(nx.date + "T00:00").toLocaleDateString("en", { weekday: "short", month: dn > 6 ? "short" : undefined, day: dn > 6 ? "numeric" : undefined }));
+  const nxHtml = noNext ? "" : `<button class="tile cover nx" data-k="${nx ? nx.key : "next"}"><small>Next</small><b>${nx ? esc(nx.title) : "Nothing coming up"}</b>`
+      + `<span>${nx ? esc([day + (nx.time ? " " + nx.time : ""), nx.detail].filter(Boolean).join(" · ")) + (nx.to ? ` · in <span class="tick">${BT.countdown(nx.to - Date.now())}</span>` : "") : "Clear for now"}</span></button>`;
+  if (layout === "front") { $("top").innerHTML = front(view).replace("<!--next-->", () => nxHtml); return; }
   $("top").innerHTML = (noNext ? "" : `<button class="tile cover nx" data-k="${nx ? nx.key : "next"}"><small>Next</small><b>${nx ? esc(nx.title) : "Nothing coming up"}</b>`
       + `<span>${nx ? esc([day + (nx.time ? " " + nx.time : ""), nx.detail].filter(Boolean).join(" · ")) + (nx.to ? ` · in <span class="tick">${BT.countdown(nx.to - Date.now())}</span>` : "") : "Clear for now"}</span></button>`)
     + (n.headline && ITEMS.cover ? `<h2 class="hl" data-k="cover">${esc(n.headline).replace(/\*([^*]+)\*/g, "<em>$1</em>")}</h2>` : "")
     + `<div class="sts">${num("late", late, "overdue", "nudges")}${num("today", nToday, "today", "next")}${num("agents", (view.agents || []).length, "agents", "agents")}${num("proj", ITEMS.projects?.count ?? 0, "projects", "projects")}</div>`;
   countUp($("top"));
+}
+// Front page: kicker + headline + dek (tap for the cover), Next, then one Today list of notes to self and Up next, grouped by day.
+function front(view) {
+  const n = view.now || {}, proj = (view.projects || []).find(p => p.slug === n.project), t = today();
+  const dayName = d => { const k = daysFrom(d); return k < 0 ? "Overdue" : k === 0 ? "Today" : k === 1 ? "Tomorrow" : new Date(d + "T00:00").toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" }); };
+  const list = [...(hidden.has("nudges") ? [] : view.nudges.filter(x => x.status === "open" || (x.status === "snoozed" && x.snooze_until && x.snooze_until <= t)).map(x => ({ date: x.due || "", n: x }))),
+    ...(hidden.has("next") ? [] : (n.upcoming || []).filter(u => u.date && daysFrom(u.date) >= 0).map(u => ({ date: u.date, u })))]
+    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.n ? -1 : 1));
+  let last = null;
+  const rows = list.map(x => {
+    const day = x.date ? dayName(x.date) : "No date", head = day !== last ? `<div class="fp-day">${esc(day)}</div>` : ""; last = day;
+    if (x.u) return `${head}<div class="fp-item"><span class="fp-time">${esc(x.u.time || "")}</span><div class="fp-t"><b>${esc(x.u.title)}</b>${x.u.detail ? `<p>${esc(x.u.detail)}</p>` : ""}</div></div>`;
+    const m = x.n;
+    return `${head}<div class="fp-item"><button class="fp-check" data-nudge="${esc(m.id)}" data-a="done" aria-label="Done: ${esc(m.title)}"></button><div class="fp-t"><b>${esc(m.title)}</b>${m.why ? `<p data-expand>${esc(m.why)}</p>` : ""}
+      <div class="acts"><button class="pill" data-nudge="${esc(m.id)}" data-a="snooze" data-days="1">Tomorrow</button><button class="pill" data-nudge="${esc(m.id)}" data-a="snooze" data-days="7">Next week</button><button class="pill" data-nudge="${esc(m.id)}" data-a="no">Drop</button></div></div></div>`;
+  }).join("");
+  return (n.headline && ITEMS.cover ? `<div class="rib"><div class="fp-kick">${proj ? esc(proj.title) + " · " : ""}Issue ${esc(view.issue)}</div><h2 class="hl fp-hl" data-k="cover">${esc(n.headline).replace(/\*([^*]+)\*/g, "<em>$1</em>")}</h2>${n.dek ? `<p class="fp-dek">${esc(n.dek)}</p>` : ""}</div>` : "")
+    + "<!--next-->" + `<h2 class="fp-h">Today and ahead<span>${list.length || ""}</span></h2>` + (rows || `<p class="fp-empty">A clear runway. Nothing to do and nothing coming up.</p>`);
 }
 setInterval(() => {  // the countdown ticks; when it runs out, the next thing takes its place
   const el = document.querySelector(".nx .tick"); if (!el || !NEXT?.to || pageKey) return;  // board() won't redo NEXT under an open page; closePage() re-renders
@@ -650,7 +702,7 @@ function board(view, late, nToday) {
   const B = $("board"), g = view.graph;
   ITEMS = Object.fromEntries(BT.items(view, { today: today(), graphSummary: g && { ...g, legend: g.legend || g.clusters } }).map(it => [it.key, it]));
   home(view, late, nToday);
-  const keys = Object.keys(ITEMS).filter(k => k !== "cover" && !hidden.has(SEC_OF[k])), moved = reflow || !order || order.length !== keys.length || !order.every(k => keys.includes(k));
+  const keys = Object.keys(ITEMS).filter(k => k !== "cover" && !(layout === "front" && (k === "next" || k === "nudges")) && !hidden.has(SEC_OF[k])), moved = reflow || !order || order.length !== keys.length || !order.every(k => keys.includes(k));
   if (moved) { order = keys; reflow = false; }
   const cells = []; for (let i = 0, r = 0; i < order.length; r++) cells.push(...(!r || r % 3 === 2 || i === order.length - 1 ? [[order[i++], 1]] : [[order[i++]], [order[i++]]]));
   const html = cells.map(([k, wide], i) => { const it = ITEMS[k], n = typeof it.count === "number";
@@ -724,7 +776,7 @@ $("island").onclick = e => { e.stopPropagation(); tap(); $("ilist").classList.to
 document.addEventListener("click", e => { if (!e.target.closest("#ilist")) $("ilist").classList.remove("on"); });
 function drawLayPick() {
   const p = (k, v, l, on) => `<button type="button" class="pill${on ? " on" : ""}" aria-pressed="${on}" data-lay="${k}" data-v="${v}">${l}</button>`;
-  $("layPick").innerHTML = p("layout", "tiles", "Tiles", layout === "tiles") + p("layout", "scroll", "Scroll", layout === "scroll");
+  $("layPick").innerHTML = p("layout", "front", "Front page", layout === "front") + p("layout", "tiles", "Tiles", layout === "tiles") + p("layout", "scroll", "Scroll", layout === "scroll");
   $("covPick").innerHTML = ["short", "medium", "long"].map(v => p("cover", v, v[0].toUpperCase() + v.slice(1), coverLen === v)).join("");
   const mine = !!S?.layout?.length;  // "As I moved them" comes from holding a tile; this only turns it back off
   $("ordPick").innerHTML = `<button type="button" class="pill${mine ? "" : " on"}" aria-pressed="${!mine}" data-ord="auto">By urgency</button>`
@@ -1094,7 +1146,7 @@ document.addEventListener("click", e => {
   if (t.id === "allIntern") { showAllIntern = !showAllIntern; return render(); }
   if (t.id === "allSessions") { showAllSessions = !showAllSessions; return render(); }
   if (t.dataset.nudge || t.dataset.idea) {
-    const card = t.closest(".nudge, .idea"); if (card.dataset.leaving) return; card.dataset.leaving = "1";
+    const card = t.closest(".nudge, .idea, .fp-item"); if (card.dataset.leaving) return; card.dataset.leaving = "1";
     const done = t.dataset.a === "done"; if (done) confetti(t);
     return leave(card, t.dataset.a === "snooze" || done ? 1 : -1).then(() => {
       if (t.dataset.idea) return act("idea", { action: t.dataset.a, text: t.dataset.idea }, done ? "Idea done 🎉" : "Dismissed");
