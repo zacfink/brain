@@ -17,7 +17,8 @@ act on them.
 - **Edit in place:** every note, person and project page opens in a side panel with a live markdown preview. ⌘S saves the file.
 - **Reopen anything:** copy the command to resume a past Claude Code chat, open a project in VS Code, or open its live site.
 - **Map of everything:** if you've run graphify (the Claude Code skill) on your notes (`graphify-out/graph.json`), a Map tile draws the knowledge graph in the app's colours. Hover a dot to see its links, click to open its note, use the legend to focus one cluster, or search it: type a few letters and it suggests matching ideas and clusters, then flies to the one you pick.
-- **Themes:** five families, each with its own modes: Classic and Brain (Light, Soft light, Dark, Soft dark, or Auto to follow your system), plus three unique ones, Phosphor, Riso and Swiss. Pick one in **Settings** on either device; with **Sync theme** on (the default, a switch on each) the other follows (shared through `claude/theme.json`), and off each keeps its own.
+- **Themes:** six families, each with its own modes: Classic and Brain (Light, Soft light, Dark, Soft dark, or Auto to follow your system), Glass (Light or Dark, see-through in the Mac app), plus three unique ones, Phosphor, Riso and Swiss. Pick one in **Settings** on either device; with **Sync theme** on (the default, a switch on each) the other follows (shared through `claude/theme.json`), and off each keeps its own.
+- **Your own tiles:** drop a markdown file in `tiles/` and it becomes a tile on the board that opens as its own page. An optional `refresh:` command keeps it live (see [Security](#security)). Hide any tile you don't use; the phone hides the same ones.
 - **Everything we've done:** one self-contained note per session, in a full-width timeline.
 - **People & me:** your profile and contacts, in the People tile on the board.
 - **On your phone:** a home-screen app with the cover, Up next, Notes to self, projects, ideas, habits and capture. It works with your laptop off, using a private GitHub repo as the backend. [Set it up →](#on-your-phone)
@@ -33,7 +34,7 @@ standard library, has no build step, and runs on macOS, Windows and Linux.
 
 ## How I actually use it
 
-I've run every Claude Code session through this since May 2026: 49 sessions across 13 projects, with 15 habits Claude
+I've run every Claude Code session through this since May 2026: 86 sessions across 15 projects, with 21 habits Claude
 follows on every session. A few things it has shipped:
 
 - **[qweb.dev](https://qweb.dev)**, the 2026 site for Queen's Web Development Club, which I co-chair: rebuilt in
@@ -48,7 +49,7 @@ argues against it first.**
 
 ### My setup
 
-**The 16 habits Claude follows every session** (from `claude/habits.md`; each started as something that went wrong once):
+**Some of the habits Claude follows every session** (from `claude/habits.md`; each started as something that went wrong once):
 
 | How we talk | How Claude works | What Claude never does |
 |---|---|---|
@@ -234,6 +235,10 @@ Prompt with `set BRAIN_AGENT=codex` followed by `%USERPROFILE%\Notes\.brain\bin\
     ├── app/theme.css         every theme's tokens (colour, type, shape, texture), shared with the phone app
     ├── app/theme.js          theme picking (family/mode, auto), shared with the phone app
     ├── tools/frames/         60fps check: drives Chrome through each theme, reports dropped frames and marks stalls
+    ├── app/tiles.js, tiles.css  the tile board, custom tiles included
+    ├── app/stats.py          Stats: reads Claude Code's transcripts
+    ├── app/routines.py       Routines tile
+    ├── app/predictions.py    scores Claude's bets ("How well Claude knows you")
     ├── app/agents.py         background agent runner (queue, one at a time, status files)
     ├── app/sync.py           git pull/commit/push for the phone app
     ├── app/phone.py          applies phone actions on GitHub, writes phone/state.json
@@ -242,6 +247,7 @@ Prompt with `set BRAIN_AGENT=codex` followed by `%USERPROFILE%\Notes\.brain\bin\
     ├── session_start.py      Claude Code SessionStart hook
     ├── codex.py              Codex adapter: keeps a brain block in ~/.codex/AGENTS.md
     ├── bin/brain, brain.cmd  launchers (macOS/Linux, Windows)
+    ├── mac/                  optional Mac app (Brain.app)
     ├── FORMATS.md            file shapes the app parses
     ├── example/              fictional notes to try it with
     └── tests/                unit tests, run on every push by GitHub Actions

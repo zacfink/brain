@@ -668,6 +668,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def routines(self, body):
         action, rid = body.get("action"), str(body.get("id") or "")
+        if NOTES == os.path.join(BRAIN, "example"):  # the demo notes: never spend the visitor's Claude usage or show their routines
+            return self.send(200, {"routines": None})
         try:
             if action == "refresh":
                 snap = ROUTINES.refresh(force=not body.get("ifStale"))
