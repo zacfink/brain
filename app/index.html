@@ -398,6 +398,45 @@ a.it-row:hover { background: var(--tile-2); }
 .themes .modes button { border: 1px solid var(--line); background: var(--tile); border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--muted); }
 .themes .modes button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 
+/* ---------- front page layout: the cover as the page's headline, one Today list (notes to self + Up next), the other tiles in a rail ---------- */
+.fp { display: none; max-width: 1240px; margin: 0 auto; }
+body.front .fp { display: block; }
+/* the ribbon: a thin glossy band across the very top, in the colour of the headline's italic */
+body.front::before { content: ""; position: fixed; inset: 0 0 auto; height: 4px; z-index: 30; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cover-solid) 40%, white), transparent 80%),
+    linear-gradient(100deg, transparent 35%, color-mix(in srgb, var(--cover-solid) 30%, white) 50%, transparent 65%) -150% 0 / 60% 100% no-repeat,
+    linear-gradient(90deg, var(--accent), var(--cover-solid) 50%, var(--accent));
+  box-shadow: 0 1px 10px color-mix(in srgb, var(--accent) 45%, transparent); animation: sheen 7s ease-in-out infinite; }
+@keyframes sheen { 0%, 55% { background-position: 0 0, -150% 0, 0 0; } 100% { background-position: 0 0, 250% 0, 0 0; } }
+.fp-lead { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 48px; align-items: end; padding: 14px 0 34px; border-bottom: 1px solid var(--line); }
+.fp-kick { font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.fp-hl { font: 800 clamp(40px, 5.2vw, 76px)/1 var(--display); letter-spacing: -.02em; margin: 14px 0 0; max-width: 17ch; text-wrap: balance; }
+.fp-hl em { font-style: italic; font-weight: 600; color: var(--accent); }
+.fp-dek { margin: 16px 0 0; max-width: 60ch; font-size: 17px; color: var(--muted); }
+.fp-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; } .fp-acts:empty { display: none; }
+.fp-next { text-align: left; border: 0; border-radius: 18px; padding: 18px 20px; background: var(--cover); color: var(--cover-ink); transition: transform .18s var(--ease), background-color .2s, color .2s; }
+.fp-next:active { transform: scale(.985); }
+.fp-next small { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.fp-next b { display: block; font: 800 24px/1.1 var(--display); margin: 6px 0 8px; }
+.fp-next span { font: 500 12px var(--mono); }
+.fp-cols { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; padding-top: 28px; align-items: start; }
+.fp-h { font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.fp-h span { color: var(--dim); margin-left: 6px; }
+.fp-day { font-weight: 600; font-size: 13px; color: var(--muted); margin: 22px 0 2px; }
+.fp-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); transition: opacity .3s; }
+.fp-item.leaving { opacity: .35; }
+.fp-check { flex: none; width: 36px; height: 36px; margin: -6px 11px 0 9px; padding: 0; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; transition: transform .18s var(--ease), background-color .2s, color .2s; }
+.fp-check::after { content: ""; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; border: 1.6px solid var(--accent); }
+.fp-check:hover::after { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.fp-check:active { transform: scale(.92); }
+.fp-time { flex: none; width: 56px; font: 500 12px var(--mono); color: var(--muted); padding-top: 3px; }
+.fp-t { flex: 1; min-width: 0; } .fp-t b { font-size: 15.5px; font-weight: 600; } .fp-t p { margin: 3px 0 0; color: var(--muted); }
+.fp-t .fp-acts { margin-top: 10px; gap: 6px; }
+.fp-tag { flex: none; font: 500 11px var(--mono); padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.fp-empty { color: var(--muted); margin-top: 18px; }
+.fp-rail .board { max-width: none; }
+@media (max-width: 900px) { .fp-lead, .fp-cols { grid-template-columns: 1fr; gap: 24px; } }
+@media (prefers-reduced-motion: reduce) { body.front::before { animation: none; } .fp-next, .fp-check, .fp-item { transition: none; } }
 </style>
 <link rel="stylesheet" href="theme.css">
 <script src="theme.js"></script>
@@ -414,6 +453,7 @@ a.it-row:hover { background: var(--tile-2); }
   </div>
 </div>
 
+<section class="fp" id="fp" aria-label="Front page"><header class="fp-lead" id="fpLead"></header><div class="fp-cols"><div><h2 class="fp-h">Today and ahead<span id="fpCount"></span></h2><div id="fpToday"></div></div><div class="fp-rail" id="fpRail"></div></div></section>
 <main class="board" id="board" aria-label="Today"></main>
 <div class="tscrim" id="tScrim"></div>
 <section class="page" id="page" role="dialog" aria-modal="true" aria-labelledby="pageTitle"><header><h2 id="pageTitle"></h2><span class="meta" id="pageMeta"></span><button class="pill sm" id="pageDone">Done</button></header><div class="bt-strip" id="pageStrip"></div><div class="ui" id="pageUi"></div></section>
@@ -771,27 +811,27 @@ function render(how) {
   const [hi] = greeting(), late = S.nudges.filter(n => n.status === "open" && n.due && daysFrom(n.due) < 0).length, today = (S.now.upcoming || []).filter(u => u.date && daysFrom(u.date) === 0).length;
   $("greet").innerHTML = `${esc(hi)}<small>${esc(new Date().toLocaleDateString("en", { weekday: "long", month: "long", day: "numeric" }))}${late ? ` · ${late} overdue` : ""}${today ? ` · ${today} today` : ""}</small>`;
   renderCover(); renderNext(); renderNudges(); renderProjects(); renderInternships(); renderIdeas(); renderHabits(); renderTimeline(); renderAgents(); renderKnows(); renderRoutines(); renderPeople();
-  renderBoard(how);
+  renderFront(); renderBoard(how);
 }
 
 /* ---------- adaptive board: app/tiles.js scores, shapes and packs; this places the pieces and opens them ---------- */
 const BT = window.BrainTiles, board = $("board"), reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 const pref = (k, d) => { try { return localStorage.getItem("brain." + k) || d; } catch { return d; } };
 const setPref = (k, v) => { try { localStorage.setItem("brain." + k, v); } catch {} };
-let coverLen = pref("cover", "medium"), layout = pref("layout", "tiles"), blocks = [], boardSig = "", boardHtml = "", boardW = 0, tileList = [], lastAct = Date.now(), reflowOnClose = false;
+let coverLen = pref("cover", "medium"), layout = pref("layout", "front"), blocks = [], boardSig = "", boardHtml = "", boardW = 0, tileList = [], lastAct = Date.now(), reflowOnClose = false;
 let drawMinis = () => {};  // initMap fills this in once the graph is laid out
 document.fonts?.ready.then(() => BT.fit(board));  // rows were fitted with fallback fonts if the web fonts were still loading
-document.body.classList.toggle("scroll", layout === "scroll");
+document.body.classList.toggle("scroll", layout === "scroll"); document.body.classList.toggle("front", layout === "front"); placeBoard();
 ["pointerdown", "keydown"].forEach(t => addEventListener(t, () => lastAct = Date.now(), true));
 function renderBoard(how) {
-  if (layout !== "tiles" || !S) return;
-  const its = BT.items(S, { graphSummary: S.graph && { nodes: S.graph.nodes, links: S.graph.links, legend: S.graph.clusters } }), byKey = Object.fromEntries(its.map(i => [i.key, i]));
+  if (layout === "scroll" || !S) return;
+  const its = BT.items(S, { graphSummary: S.graph && { nodes: S.graph.nodes, links: S.graph.links, legend: S.graph.clusters } }).filter(i => layout !== "front" || !FRONT.has(i.key)), byKey = Object.fromEntries(its.map(i => [i.key, i]));
   const W = board.clientWidth, cols = BT.colsFor(W), cw = (W - (cols - 1) * BT.GAP) / cols, sigOf = bs => JSON.stringify(bs.map(b => [b.key, b.cells]));
   tileList = its;
   // Keep the pieces where they are (content only) for background refreshes while he's around, and while a tile is open.
   const keep = W === boardW && blocks.length === its.length && blocks.every(b => byKey[b.key]) && how !== "resize" && how !== "load" && (page?.key || (how === "bg" && Date.now() - lastAct < 600e3));
-  if (keep) { if (page?.key && how === "act" && sigOf(BT.solve(its, cols, cw, { cover: coverLen, fixed: !!S.layout?.length })) !== boardSig) reflowOnClose = true; }
-  else blocks = BT.solve(its, cols, cw, { cover: coverLen, fixed: !!S.layout?.length });
+  if (keep) { if (page?.key && how === "act" && sigOf(BT.solve(its, cols, cw, { cover: coverLen, fixed: !!S.layout?.length, noHero: layout === "front" })) !== boardSig) reflowOnClose = true; }
+  else blocks = BT.solve(its, cols, cw, { cover: coverLen, fixed: !!S.layout?.length, noHero: layout === "front" });
   const sig = sigOf(blocks), moved = sig !== boardSig; boardSig = sig; boardW = W;
   const g = { cw, rh: BT.ROW, gap: BT.GAP, cover: coverLen, radius: document.documentElement.dataset.family === "swiss" ? 0 : 20 };  // Swiss is square everywhere
   const html = blocks.map(b => {
@@ -806,11 +846,38 @@ function renderBoard(how) {
   };
   if (how === "act" && moved && document.startViewTransition && !reduceMotion.matches) document.startViewTransition(paint); else paint();
 }
+
+/* ---------- front page layout: the cover is the page's headline, notes to self and Up next share one Today list, the other tiles sit in a rail ---------- */
+const FRONT = new Set(["cover", "next", "nudges"]);
+function placeBoard() { layout === "front" ? $("fpRail").append(board) : $("fp").after(board); }
+function renderFront() {
+  if (layout !== "front" || !S) return;
+  const n = S.now, proj = S.projects.find(p => p.slug === n.project), hid = new Set(S.hidden || []), nx = hid.has("next") ? null : BT.nextUp(S);
+  const dayName = d => { const k = daysFrom(d); return k < 0 ? "Overdue" : k === 0 ? "Today" : k === 1 ? "Tomorrow" : new Date(d + "T12:00:00").toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" }); };
+  $("fpLead").innerHTML = `<div><div class="fp-kick">${proj ? esc(proj.title) + " · " : ""}Issue ${esc(S.issue)}</div>
+    <h2 class="fp-hl">${n.headline ? esc(n.headline).replace(/\*(.+?)\*/g, "<em>$1</em>") : "Nothing on the cover yet."}</h2>
+    <p class="fp-dek">${n.headline ? esc(n.dek || "") : "Claude writes the headline in <code>now.md</code> after real work."}</p>
+    <div class="fp-acts">${proj ? reopenButtons(proj, { big: true }) + `<button class="pill ghost" data-open="${esc(proj.path)}">${I.note}Project page</button>` : ""}</div></div>`
+    + (nx ? `<button class="fp-next" data-k="${nx.key}"><small>Next</small><b>${esc(nx.title)}</b><span>${esc([dayName(nx.date) + (nx.time ? " " + nx.time : ""), nx.key === "nudges" ? "note to self" : nx.detail].filter(Boolean).join(" · "))}</span></button>` : "");
+  const list = [...(hid.has("nudges") ? [] : S.nudges.filter(x => x.status === "open").map(x => ({ date: x.due || "", n: x }))),
+    ...(hid.has("next") ? [] : (n.upcoming || []).filter(u => u.date && daysFrom(u.date) >= 0).map(u => ({ date: u.date, u })))]
+    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999") || (a.n ? -1 : 1));
+  let last = null;
+  $("fpCount").textContent = list.length || "";
+  $("fpToday").innerHTML = list.map(x => {
+    const day = x.date ? dayName(x.date) : "No date", head = day !== last ? `<div class="fp-day">${esc(day)}</div>` : ""; last = day;
+    if (x.u) return `${head}<div class="fp-item"><span class="fp-time">${esc(x.u.time || "")}</span><div class="fp-t"><b>${esc(x.u.title)}</b>${x.u.detail ? `<p>${esc(x.u.detail)}</p>` : ""}</div></div>`;
+    const m = x.n;
+    return `${head}<div class="fp-item" data-nudge="${esc(m.id)}"><button class="fp-check" data-nact="done" aria-label="Done: ${esc(m.title)}"></button><div class="fp-t"><b>${esc(m.title)}</b>${m.why ? `<p>${esc(m.why)}</p>` : ""}
+      <div class="fp-acts"><button class="pill sm" data-nact="snooze" data-days="1">Tomorrow</button><button class="pill sm" data-nact="snooze" data-days="7">Next week</button><button class="pill sm" data-nact="no">Not doing this</button>${/\.md$/.test(m.source || "") ? `<button class="pill sm" data-open="${esc(m.source)}">Why?</button>` : ""}</div></div><span class="fp-tag">note to self</span></div>`;
+  }).join("") || `<p class="fp-empty">A clear runway. Nothing to do and nothing coming up.</p>`;
+}
+$("fpLead").addEventListener("click", e => { const b = e.target.closest(".fp-next"); if (b) openTile(b.dataset.k, b); });
 let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (board.clientWidth !== boardW) renderBoard("resize"); }, 150); });
 document.addEventListener("brain-theme", () => renderBoard("resize"));
 function setLayout(v) {
-  layout = v; setPref("layout", v); document.body.classList.toggle("scroll", v === "scroll");
-  boardW = 0; renderBoard("load");
+  layout = v; setPref("layout", v); document.body.classList.toggle("scroll", v === "scroll"); document.body.classList.toggle("front", v === "front"); placeBoard();
+  boardW = 0; renderFront(); renderBoard("load");
 }
 
 // Opening a tile: the real section moves out of #grid into the page, which grows from the tile's box; Done/Esc/outside puts it back.
@@ -893,7 +960,7 @@ board.addEventListener("keydown", e => { const bt = e.target.classList?.contains
 function drawSettings() {
   const seg = (vals, on) => vals.map(([v, l]) => `<button data-v="${v}" class="${v === on ? "on" : ""}">${l}</button>`).join("");
   $("segCover").innerHTML = seg([["short", "Short"], ["medium", "Medium"], ["long", "Long"]], coverLen);
-  $("segLayout").innerHTML = seg([["tiles", "Tiles"], ["scroll", "Scroll"]], layout);
+  $("segLayout").innerHTML = seg([["front", "Front page"], ["tiles", "Tiles"], ["scroll", "Scroll"]], layout);
   $("segOrder").innerHTML = seg([["auto", "By urgency"], ["mine", "As I moved them"]], S?.layout?.length ? "mine" : "auto");
   // every tile, hidden ones too; lit = on the board. Saved in claude/layout.json, so the phone hides the same ones.
   const off = new Set(S?.hidden || []), all = S ? BT.items(S, { all: true, graphSummary: S.graph && { nodes: S.graph.nodes } }) : [];

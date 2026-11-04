@@ -165,7 +165,7 @@ function templates(it, rank, cols, colW, o) {
   if (cols <= 6) {  // phone: pieces stack at full width, header above its list; number tiles pair up two to a row
     const F = cols, half = Math.max(1, Math.floor(F / 2)), hh = need(headPx(it, pw(F)));
     if (it.cleared) return [[P(0, 0, half, need(80), "big")]];
-    if (rank === 0) return [[P(0, 0, F, need(heroPx(it, pw(F), true, cover)), "hero")]];
+    if (rank === 0 && !(o && o.noHero)) return [[P(0, 0, F, need(heroPx(it, pw(F), true, cover)), "hero")]];
     if (it.events) return [[P(0, 0, F, hh, "head"), P(0, hh, F, need(Math.min(it.events.length, 5) * 58 + 12), "list")]];
     if (it.legend) return [[P(0, 0, F, need(200), "map")]];
     if (n && s >= 18) { const lr = need(Math.min(n, 5) * 32 + (n > 5 ? 44 : 8));  /* room for "All N →" only when rows are left out */ return [[P(0, 0, F, hh, "head"), P(0, hh, F, lr, "list")]]; }
@@ -174,7 +174,7 @@ function templates(it, rank, cols, colW, o) {
   // desktop: designed at 12 columns, widths scaled to 10/8
   const W = c => cols === 12 ? c : Math.min(cols, Math.max(2, Math.round(c * cols / 12))), B = need(118);
   if (it.cleared) return [[P(0, 0, W(2), need(80), "big")], [P(0, 0, W(3), need(80), "big")]];
-  if (rank === 0) return [7, 8].map(c => [P(0, 0, W(c), need(heroPx(it, pw(W(c)), false, cover)), "hero")]);
+  if (rank === 0 && !(o && o.noHero)) return [7, 8].map(c => [P(0, 0, W(c), need(heroPx(it, pw(W(c)), false, cover)), "hero")]);
   const hh = c => need(headPx(it, pw(W(c))));
   if (it.events) {
     const lr = need(Math.min(it.events.length, 8) * 50 + 12 + (it.events.length > 8 ? 40 : 0));
@@ -190,6 +190,7 @@ function templates(it, rank, cols, colW, o) {
   return it.days ? [[P(0, 0, W(3), need(140), "big")]] : n ? [[P(0, 0, W(3), need(230), "big")], [P(0, 0, W(4), need(190), "big")]] : [[P(0, 0, W(2), B, "big")], [P(0, 0, W(3), B, "big")]];
 }
 
+// o.noHero: no piece gets the hero shape (the front page layout already leads with the cover)
 // ---------- solve: seeded multi-trial packing, then gap closing and arms (no holes, ever) ----------
 const rng = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const cellsOf = parts => parts.flatMap(q => { const o = []; for (let y = q.y; y < q.y + q.r; y++) for (let x = q.x; x < q.x + q.c; x++) o.push([x, y]); return o; });

@@ -9,76 +9,170 @@
 <link rel="apple-touch-icon" href="mobile/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bodoni+Moda:opsz,wght@6..96,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Bodoni+Moda:ital,opsz,wght@0,6..96,700;1,6..96,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-/* Brain light / dark, from app/theme.css */
-:root { --bg: #f4f2ef; --tile: #ffffff; --line: #e4e0da; --ink: #1c1915; --muted: #625b52; --accent: #e2621b; --accent-ink: #ffffff; --good: #1f8a4c; color-scheme: light dark; }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #0e0d0c; --tile: #171513; --line: #2a2622; --ink: #efeae3; --muted: #a19a91; --accent: #ff8a3d; --accent-ink: #1a0d03; --good: #5fd38d; }
-}
+/* Brain light / dark, from app/theme.css. The hero shows real lines from example/, labelled by who wrote them. */
+:root { --bg: #f4f2ef; --tile: #ffffff; --tile-2: #f7f5f2; --line: #e4e0da; --ink: #1c1915; --muted: #625b52; --dim: #958d83;
+  --accent: #e2621b; --accent-ink: #fff; --cover: #ffb547; --good: #1f8a4c; color-scheme: light dark;
+  --sans: "Schibsted Grotesk", -apple-system, system-ui, sans-serif; --display: "Bodoni Moda", Didot, Georgia, serif; --mono: "JetBrains Mono", ui-monospace, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme=light]) { --bg: #0e0d0c; --tile: #171513; --tile-2: #1f1c19; --line: #2a2622; --ink: #efeae3; --muted: #a19a91; --dim: #6f6961; --accent: #ff8a3d; --accent-ink: #1a0d03; --good: #5fd38d; } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 Inter, system-ui, sans-serif; }
-main { max-width: 920px; margin: 0 auto; padding: 48px 16px 80px; }
-h1 { font: 700 clamp(44px, 9vw, 76px)/1 "Bodoni Moda", Georgia, serif; margin: 0 0 16px; letter-spacing: -.01em; }
-h1 .dot { color: var(--good); }
-h2 { font-size: 22px; margin: 56px 0 8px; }
-.lede { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 0 28px; }
-.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.btn { display: inline-block; padding: 12px 20px; border-radius: 10px; font: 600 15px Inter, sans-serif; text-decoration: none; border: 1px solid var(--line); color: var(--ink); background: var(--tile); cursor: pointer; }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+nav { display: flex; align-items: baseline; gap: 22px; padding: 22px 0; border-bottom: 1px solid var(--ink); }
+.mark { font: 700 26px var(--display); text-decoration: none; }
+.mark i { color: var(--good); font-style: normal; }
+nav .sp { flex: 1; }
+nav a.l { font: 500 12px var(--mono); color: var(--muted); text-decoration: none; text-transform: uppercase; letter-spacing: .05em; }
+.meta { font: 500 12px var(--mono); color: var(--muted); }
+
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; padding: 64px 0 72px; align-items: center; }
+.kicker { font: 500 12px var(--mono); color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+h1 { font: 700 clamp(44px, 6.2vw, 78px)/.98 var(--display); letter-spacing: -.02em; margin: 16px 0 22px; }
+h1 em { color: var(--accent); }
+.lede { font-size: 20px; color: var(--muted); max-width: 520px; margin: 0 0 30px; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.btn { display: inline-flex; padding: 13px 22px; border-radius: 14px; font: 600 16px var(--sans); text-decoration: none; border: 1px solid var(--line); background: var(--tile); color: var(--ink); cursor: pointer; transition: transform .18s, background-color .2s; }
+.btn:active { transform: scale(.96); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .small { font-size: 14px; color: var(--muted); }
-a { color: var(--accent); }
-img { max-width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); display: block; }
-.shot { margin: 40px 0 0; }
-.tabs { display: flex; gap: 8px; margin: 16px 0 0; flex-wrap: wrap; }
-.tabs button { font: 600 15px Inter, sans-serif; padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--tile); color: var(--muted); cursor: pointer; }
-.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.prompt { position: relative; margin-top: 12px; }
-.prompt p { margin: 8px 0 12px; color: var(--muted); }
-pre { margin: 0; padding: 18px; background: var(--tile); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; font: 500 13px/1.6 "JetBrains Mono", ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; padding-bottom: 52px; }
-.copy.btn { position: absolute; bottom: 10px; right: 10px; padding: 6px 12px; font-size: 13px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 16px; margin-top: 16px; }
-.card { background: var(--tile); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
-.card b { display: block; margin-bottom: 4px; }
-.card span { color: var(--muted); font-size: 15px; }
-.phone { display: grid; grid-template-columns: minmax(0, 240px) 1fr; gap: 28px; align-items: center; margin-top: 16px; }
-@media (max-width: 600px) { .phone { grid-template-columns: 1fr; } .phone img { max-width: 240px; } }
-footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
+.fine { margin: 18px 0 0; max-width: 520px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The two-author stack: real lines from example/ */
+.stack { position: relative; display: grid; gap: 14px; }
+.file { background: var(--tile); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px 20px; box-shadow: 0 1px 2px rgba(60,40,20,.05), 0 14px 40px -18px rgba(60,40,20,.18); }
+.file:nth-child(2) { margin-left: 44px; }
+.file:nth-child(3) { margin-right: 28px; }
+.file header { display: flex; align-items: center; gap: 10px; font: 500 12px var(--mono); color: var(--muted); margin-bottom: 10px; }
+.file header .sp { flex: 1; }
+.by { font: 600 12px var(--sans); padding: 3px 10px; border-radius: 999px; }
+.by.you { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent); }
+.by.ai { background: color-mix(in srgb, var(--good) 13%, transparent); color: var(--good); }
+.file h4 { margin: 0 0 4px; font-size: 17px; }
+.file p { margin: 0; color: var(--muted); font-size: 15px; }
+.file .md { font: 500 13px/1.7 var(--mono); color: var(--muted); }
+.file .md b { color: var(--ink); font-weight: 500; }
+
+.band { background: var(--tile-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 72px 0; }
+.band img { display: block; width: 100%; border-radius: 18px; box-shadow: 0 30px 80px -30px rgba(40,25,10,.4); }
+.cap { display: flex; justify-content: space-between; margin-top: 14px; }
+
+h2 { font: 700 clamp(32px, 4.6vw, 52px)/1.04 var(--display); letter-spacing: -.015em; margin: 0 0 12px; }
+section { padding: 96px 0 0; }
+.rows { margin-top: 36px; border-top: 1px solid var(--ink); }
+.row { display: grid; grid-template-columns: 60px 260px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.row .n { font: 500 12px var(--mono); color: var(--dim); }
+.row b { font-size: 19px; letter-spacing: -.01em; }
+.row span { color: var(--muted); }
+code { font: 500 .88em var(--mono); }
+
+.setup { display: grid; grid-template-columns: 1fr 1.4fr; gap: 56px; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0 0; }
+.tabs button { font: 600 15px var(--sans); padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--tile); color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.panel p { color: var(--muted); }
+.prompt { position: relative; }
+pre { margin: 0; padding: 20px; background: var(--tile); border: 1px solid var(--line); border-radius: 14px; font: 500 13px/1.65 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 380px; overflow: auto; }
+.copy { margin-top: 10px; padding: 6px 14px; font-size: 13px; }
+.try { margin-top: 20px; }
+
+.phone { display: grid; grid-template-columns: 280px 1fr; gap: 64px; align-items: center; }
+.phone img { width: 100%; border-radius: 36px; border: 8px solid var(--ink); display: block; }
+footer { margin-top: 110px; padding: 24px 0 48px; border-top: 1px solid var(--ink); display: flex; gap: 20px; flex-wrap: wrap; }
+footer .sp { flex: 1; }
+
+@media (max-width: 800px) {
+  nav a.l { display: none; }
+  .hero, .setup, .phone { grid-template-columns: 1fr; gap: 36px; }
+  .hero { padding-top: 36px; }
+  .file:nth-child(2) { margin-left: 18px; } .file:nth-child(3) { margin-right: 12px; }
+  .row { grid-template-columns: 1fr; gap: 4px; }
+  .phone img { max-width: 240px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
 </style>
 </head>
 <body>
-<main>
-  <h1>Brain<span class="dot">.</span></h1>
-  <p class="lede"><b>A shared space for you and your AI.</b> Plain markdown notes that you and your agent both read and write, plus a board to see what it's doing, what it learned about you and what's next. On your Mac, in the browser and on your phone.</p>
-  <p class="small">Works with Claude Code and Codex. The notes are plain files, so any agent that can read a folder can use them.</p>
-  <div class="actions">
-    <a class="btn primary" href="#setup">Set it up with one prompt</a>
-    <a class="btn" href="https://github.com/zacfink/brain/releases/latest">Download the latest release</a>
-    <span class="small">Mac app: built for you during setup</span>
-    <a class="small" href="https://github.com/zacfink/brain">Source on GitHub</a>
-  </div>
-  <img class="shot" src="docs/screenshot.png" alt="Brain app running on the example notes">
+<div class="wrap">
+  <nav>
+    <a class="mark" href="#">Brain<i>.</i></a>
+    <span class="meta">For Claude Code and Codex</span>
+    <span class="sp"></span>
+    <a class="l" href="#what">What it does</a>
+    <a class="l" href="#setup">Set up</a>
+    <a class="l" href="https://github.com/zacfink/brain">GitHub</a>
+  </nav>
 
-  <h2>What it does</h2>
-  <div class="grid">
-    <div class="card"><b>Cover story</b><span>Claude writes a magazine-style headline about your week after real work.</span></div>
-    <div class="card"><b>Habits Claude follows</b><span>Claude proposes habits; you switch each one on or off.</span></div>
-    <div class="card"><b>Notes to self</b><span>Reminders Claude adds only when they help. Done, snooze, or "not doing this".</span></div>
-    <div class="card"><b>⌘K capture</b><span>Type a thought, to-do or person. Claude files it into the right note next session.</span></div>
-    <div class="card"><b>Custom tiles</b><span>Any <code>tiles/*.md</code> becomes a tile, optionally kept live by a script.</span></div>
-    <div class="card"><b>Plain files</b><span>Everything is markdown on your machine. Python standard library, no build step.</span></div>
-  </div>
+  <header class="hero">
+    <div>
+      <span class="kicker">Plain markdown · on your machine</span>
+      <h1>A shared space for you <em>and</em> your AI.</h1>
+      <p class="lede">Notes that you and your agent both read and write, so it stops re-deriving who you are every session. Plus a board to see what it's doing, what it learned about you and what's next.</p>
+      <div class="actions">
+        <a class="btn primary" href="#setup">Set it up with one prompt</a>
+        <a class="btn" href="https://github.com/zacfink/brain/releases/latest">Download the latest release</a>
+      </div>
+      <p class="small fine">Works with <a href="https://claude.com/claude-code">Claude Code</a> and <a href="https://github.com/openai/codex">Codex</a>. The notes are plain files, so any agent that can read a folder can use them. Mac app: built for you during setup.</p>
+    </div>
+    <div class="stack" aria-label="Example notes from the demo folder">
+      <div class="file">
+        <header><span>me.md</span><span class="sp"></span><span class="by you">You wrote</span></header>
+        <div class="md"><b>## How I work</b><br>- Short answers first; details on request.<br>- Reminders go to the phone calendar, not the terminal.</div>
+      </div>
+      <div class="file">
+        <header><span>claude/habits.md</span><span class="sp"></span><span class="by ai">Claude wrote</span></header>
+        <h4>Lead with the answer, keep it short</h4>
+        <p>On · Sam asked for shorter replies on Sept 3.</p>
+      </div>
+      <div class="file">
+        <header><span>nudges.md</span><span class="sp"></span><span class="by ai">Claude wrote</span></header>
+        <h4>Send Priya two meeting times</h4>
+        <p>You told her on Sept 12 you'd send times "early next week". She's holding a sponsorship slot for the club.</p>
+      </div>
+    </div>
+  </header>
+</div>
 
-  <h2 id="setup">Set it up with one prompt</h2>
-  <p class="small">Paste one of these into <a href="https://claude.com/claude-code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex</a> and answer its questions. It asks before anything that touches your accounts.</p>
-  <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" aria-controls="p-fresh" id="t-fresh">Starting fresh</button>
-    <button role="tab" aria-selected="false" aria-controls="p-notes" id="t-notes">Already keep notes</button>
+<div class="band">
+  <div class="wrap">
+    <img src="docs/screenshot.png" alt="Brain app running on the example notes">
+    <div class="cap"><span class="meta">The board, on example/: a fictional student's notes</span><span class="meta">Mac · browser · phone</span></div>
   </div>
-  <div class="prompt" role="tabpanel" id="p-fresh" aria-labelledby="t-fresh">
-    <p>No notes yet, or you'd rather begin clean. Claude interviews you and writes your first notes.</p>
-    <pre>Set up Brain (https://github.com/zacfink/brain) for me from scratch. Work through it step by step, tell me what each step is for in one line, and ask me before anything that touches my accounts.
+</div>
+
+<div class="wrap">
+  <section id="what">
+    <h2>What's on the board</h2>
+    <p class="small">Everything is plain markdown on your machine. Python standard library, no build step.</p>
+    <div class="rows">
+      <div class="row"><span class="n">01</span><b>Cover story</b><span>Claude writes a magazine-style headline about your week after real work.</span></div>
+      <div class="row"><span class="n">02</span><b>Habits Claude follows</b><span>Claude proposes habits; you switch each one on or off.</span></div>
+      <div class="row"><span class="n">03</span><b>Notes to self</b><span>Reminders Claude adds only when they help. Done, snooze, or "not doing this".</span></div>
+      <div class="row"><span class="n">04</span><b>⌘K capture</b><span>Type a thought, to-do or person. Claude files it into the right note next session.</span></div>
+      <div class="row"><span class="n">05</span><b>Custom tiles</b><span>Any <code>tiles/*.md</code> becomes a tile, optionally kept live by a script.</span></div>
+      <div class="row"><span class="n">06</span><b>On your phone</b><span>Works with your laptop off, using a private GitHub repo of yours as the backend.</span></div>
+    </div>
+  </section>
+
+  <section id="setup" class="setup">
+    <div>
+      <h2>Set it up with one prompt.</h2>
+      <p class="small">Paste one of these into <a href="https://claude.com/claude-code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex</a> and answer its questions. It asks before anything that touches your accounts.</p>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" aria-controls="p-fresh" id="t-fresh">Starting fresh</button>
+        <button role="tab" aria-selected="false" aria-controls="p-notes" id="t-notes">Already keep notes</button>
+      </div>
+      <div class="try prompt"><p class="small">Or try it in 30 seconds. <code>example/</code> is a fictional student's notes. Python 3.9+, macOS, Windows and Linux.</p>
+        <pre>git clone https://github.com/zacfink/brain.git
+cd brain
+python3 app/server.py --notes example      # opens http://127.0.0.1:4747</pre><button class="btn copy" type="button">Copy</button></div>
+    </div>
+    <div>
+      <div class="panel" role="tabpanel" id="p-fresh" aria-labelledby="t-fresh">
+        <p>No notes yet, or you'd rather begin clean. Claude interviews you and writes your first notes.</p>
+        <div class="prompt"><pre>Set up Brain (https://github.com/zacfink/brain) for me from scratch. Work through it step by step, tell me what each step is for in one line, and ask me before anything that touches my accounts.
 
 1. Clone https://github.com/zacfink/brain.git into ~/Notes/.brain (keep anything already in ~/Notes), link ~/Notes/.brain/bin/brain into ~/.local/bin (create it, and add it to my shell profile's PATH if it isn't there), and read ~/Notes/.brain/README.md and FORMATS.md before going on.
 2. Interview me briefly: my name, what I do, my active projects, people I work with, anything due in the next two weeks. Then write my first notes in the FORMATS.md shapes: me.md, now.md, one page per project, people pages, nudges.md, ideas.md, inbox.md and claude/habits.md (two or three habits from what I told you, status "proposed"). If you can see my projects folder, calendar or email, use them to fill gaps, and say what you took from where.
@@ -86,12 +180,11 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
 4. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 5. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh, add docs/notes-workflow.yml as .github/workflows/brain.yml plus phone/queue/.gitkeep, commit and push, and wait for the Action's first run to write phone/state.json.
 6. Walk me through making the phone key (README → On your phone, step 3); I paste it to you. Then give me my one-tap install link: https://zacfink.github.io/brain/mobile/#c= followed by base64 of {"repo":"&lt;me&gt;/notes","token":"&lt;key&gt;"}. Tell me to open it in Safari, tap Share → Add to Home Screen, and treat the link like a password. Don't save the key anywhere.
-7. Finish with a short list: what's set up, what I should try first, and anything that didn't work.</pre>
-    <button class="btn copy" type="button">Copy</button>
-  </div>
-  <div class="prompt" role="tabpanel" id="p-notes" aria-labelledby="t-notes" hidden>
-    <p>Obsidian, Notion, Apple Notes or a markdown folder. Claude builds your Brain from them and never touches the originals.</p>
-    <pre>Set up Brain (https://github.com/zacfink/brain) for me from the notes I already have. Work through it step by step, tell me what each step is for in one line, and ask me before anything that touches my accounts.
+7. Finish with a short list: what's set up, what I should try first, and anything that didn't work.</pre><button class="btn copy" type="button">Copy</button></div>
+      </div>
+      <div class="panel" role="tabpanel" id="p-notes" aria-labelledby="t-notes" hidden>
+        <p>Obsidian, Notion, Apple Notes or a markdown folder. Claude builds your Brain from them and never touches the originals.</p>
+        <div class="prompt"><pre>Set up Brain (https://github.com/zacfink/brain) for me from the notes I already have. Work through it step by step, tell me what each step is for in one line, and ask me before anything that touches my accounts.
 
 1. Ask me where my existing notes are (an Obsidian vault, a Notion or Apple Notes export, or any folder of markdown or text). Treat that folder as read-only: never move, rename, edit or delete anything in it. If it is ~/Notes itself, stop and ask me where Brain's notes should go instead.
 2. Clone https://github.com/zacfink/brain.git into ~/Notes/.brain (keep anything already in ~/Notes), link ~/Notes/.brain/bin/brain into ~/.local/bin (create it, and add it to my shell profile's PATH if it isn't there), and read ~/Notes/.brain/README.md and FORMATS.md before going on.
@@ -100,35 +193,24 @@ footer { margin-top: 64px; font-size: 14px; color: var(--muted); }
 5. Connect yourself: if you're Claude Code, add the SessionStart hook from the README to ~/.claude/settings.json (merge, don't overwrite) and the README's standing instructions to my CLAUDE.md; if you're Codex, run python3 ~/Notes/.brain/codex.py. Then run python3 ~/Notes/.brain/build.py.
 6. Start the app with `brain` and check it opens at http://127.0.0.1:4747. On a Mac, ask me whether I want it as an app; if yes, run ~/Notes/.brain/mac/build.sh (needs Xcode's command line tools) to make ~/Applications/Brain.app.
 7. Phone (ask me first): add ".brain/" to ~/Notes/.gitignore, create a PRIVATE GitHub repo "notes" with gh, add docs/notes-workflow.yml as .github/workflows/brain.yml plus phone/queue/.gitkeep, commit and push, and wait for the Action's first run to write phone/state.json. Then walk me through the phone key (README → On your phone, step 3) and give me my one-tap install link, as in the from-scratch setup. Don't save the key anywhere.
-8. Finish with a short list: what's set up, what came from which of my old notes, what I should try first, and anything that didn't work.</pre>
-    <button class="btn copy" type="button">Copy</button>
-  </div>
+8. Finish with a short list: what's set up, what came from which of my old notes, what I should try first, and anything that didn't work.</pre><button class="btn copy" type="button">Copy</button></div>
+      </div>
+    </div>
+  </section>
 
-  <h2>Or try it in 30 seconds</h2>
-  <div class="prompt">
-    <pre>git clone https://github.com/zacfink/brain.git
-cd brain
-python3 app/server.py --notes example      # opens http://127.0.0.1:4747</pre>
-    <button class="btn copy" type="button">Copy</button>
-  </div>
-  <p class="small"><code>example/</code> is a fictional student's notes. Python 3.9+, macOS, Windows and Linux.</p>
+  <section class="phone">
+    <img src="docs/phone.png" loading="lazy" alt="Brain's phone app on the example notes">
+    <div>
+      <h2>In your pocket, <em>laptop off.</em></h2>
+      <p class="small" style="font-size:18px;max-width:520px">A home-screen app with the cover, Up next, notes to self, projects, ideas and capture. It uses a private GitHub repo of yours as the backend. The setup prompt ends with a one-tap install link.</p>
+    </div>
+  </section>
 
-  <h2>On your phone</h2>
-  <div class="phone">
-    <img src="docs/phone.png" alt="Brain's phone app on the example notes" loading="lazy">
-    <p>A home-screen app with the cover, Up next, notes to self, projects, ideas and capture. It works with your laptop off, using a private GitHub repo of yours as the backend. The setup prompt walks you through it and ends with a one-tap install link.</p>
-  </div>
-
-  <footer><a href="https://github.com/zacfink/brain/releases/latest">Release notes</a> · <a href="https://github.com/zacfink/brain">GitHub</a> · made by <a href="https://zacfinkelstein.ca">Zac Finkelstein</a></footer>
-</main>
+  <footer class="small"><span>Made by <a href="https://zacfinkelstein.ca">Zac Finkelstein</a> · MIT licensed</span><span class="sp"></span><a href="https://github.com/zacfink/brain/releases/latest">Release notes</a><a href="https://github.com/zacfink/brain">GitHub</a></footer>
+</div>
 <script>
-document.querySelectorAll('[role=tab]').forEach(t => t.onclick = () => {
-  document.querySelectorAll('[role=tab]').forEach(o => {
-    const on = o === t;
-    o.setAttribute('aria-selected', on);
-    document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
-  });
-});
+document.querySelectorAll('[role=tab]').forEach(t => t.onclick = () => document.querySelectorAll('[role=tab]').forEach(o => {
+  const on = o === t; o.setAttribute('aria-selected', on); document.getElementById(o.getAttribute('aria-controls')).hidden = !on; }));
 document.querySelectorAll('.copy').forEach(b => b.onclick = async () => {
   try { await navigator.clipboard.writeText(b.previousElementSibling.textContent); b.textContent = 'Copied'; }
   catch { b.textContent = 'Select and copy'; }
