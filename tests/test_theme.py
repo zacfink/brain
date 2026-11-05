@@ -4,6 +4,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+os.environ["CODEX_HOME"] = tempfile.mkdtemp()  # never write the real ~/.codex/AGENTS.md from tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app"))
 import server  # noqa: E402

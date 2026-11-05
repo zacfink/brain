@@ -11,6 +11,7 @@ import unittest
 BRAIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BRAIN, "app"))
 from sync import Sync  # noqa: E402
+os.environ["CODEX_HOME"] = tempfile.mkdtemp()  # never write the real ~/.codex/AGENTS.md from tests
 
 
 def git(cwd, *args):
