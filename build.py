@@ -88,6 +88,112 @@ def decisions_due(notes, today):
     return sorted(out, key=lambda d: d["check_by"])
 
 
+def sync_school_assessments(notes, today):
+    """Refresh the generated School assessment block in now.md from the mirrored Assessment Map table."""
+    source = os.path.join(notes, "school", "assessment-map-fall-2026.md")
+    now_path = os.path.join(notes, "now.md")
+    if not os.path.exists(source) or not os.path.exists(now_path):
+        return False
+    desktop_map = os.path.expanduser("~/Desktop/School/Year 3 - 2026-27/Semester 1/Assessment Map.md")
+    if os.path.exists(desktop_map):
+        with open(desktop_map, encoding="utf-8", errors="replace") as f:
+            original = f.read()
+        table = re.search(r"(?m)^## Dated assessments\s*\n(.*?)(?=^## |\Z)", original, re.S)
+        if table:
+            mirror = (
+                "# Assessment Map feed — Fall 2026\n\n"
+                "Source: `~/Desktop/School/Year 3 - 2026-27/Semester 1/Assessment Map.md`, section “Dated assessments”.\n"
+                "This copy is refreshed automatically by `.brain/build.py` when the iCloud Desktop file is available.\n"
+                "The cloud morning update reads this mirrored table; CISC 457 is excluded because it was dropped.\n\n"
+                "## Dated assessments\n\n" + table.group(1).strip() + "\n"
+            )
+            with open(source, encoding="utf-8", errors="replace") as f:
+                old_mirror = f.read()
+            if mirror != old_mirror:
+                with open(source, "w", encoding="utf-8") as f:
+                    f.write(mirror)
+                print("Refreshed assessment-map mirror from Desktop")
+    with open(source, encoding="utf-8", errors="replace") as f:
+        assessment_map = f.read()
+    with open(now_path, encoding="utf-8", errors="replace") as f:
+        now = f.read()
+    if "## Dated assessments" not in assessment_map:
+        return False
+
+    heading = re.search(r"Fall\s+(20\d{2})", assessment_map)
+    year = int(heading.group(1)) if heading else int(today[:4])
+    months = {"sep": 9, "sept": 9, "oct": 10, "nov": 11, "dec": 12}
+    rows = []
+    table_started = False
+    for line in assessment_map.splitlines():
+        if line.strip() == "## Dated assessments":
+            table_started = True
+            continue
+        if table_started and line.startswith("## "):
+            break
+        if not table_started or not line.startswith("|") or line.startswith("|-") or "| Date |" in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 4:
+            continue
+        date_cell, course, item, weight = [re.sub(r"\*\*|`", "", c).strip() for c in cells[:4]]
+        match = re.search(r"\b(Sept?|Oct|Nov|Dec)\s+(\d{1,2})(?:\s*[–-]\s*(\d{1,2}))?", date_cell)
+        if not match:
+            continue
+        month, day, end_day = match.groups()
+        month_num = months[month.lower()]
+        due = datetime.date(year, month_num, int(day))
+        if due.isoformat() < today:
+            continue
+        time = re.search(r"\b(\d{1,2}:\d{2})\b", date_cell)
+        date_label = due.isoformat() + (" " + time.group(1) if time else "")
+        details = []
+        if end_day:
+            details.append("exam period through %s %d" % (month, int(end_day)))
+        details.append(item)
+        details.append(weight)
+        if course == "CISC 360" and "quiz" in item.lower():
+            details.append("tentative")
+        rows.append((course, item, "- %s · %s · %s" % (date_label, course, " · ".join(details))))
+
+    start, end = "<!-- school-assessments:start -->", "<!-- school-assessments:end -->"
+    section = re.search(r"(?m)^## Upcoming\s*\n(.*?)(?=^## |\Z)", now, re.S)
+    if not section:
+        return False
+    body = section.group(1)
+    if start in body and end in body:
+        before, remainder = body.split(start, 1)
+        _, after = remainder.split(end, 1)
+        body = before + after
+
+    kept = []
+    for line in body.splitlines():
+        if not line.startswith("- "):
+            kept.append(line)
+            continue
+        if "CISC 457" in line:
+            continue
+        dated = re.match(r"- \d{4}-\d{2}-\d{2}(?: \d{1,2}:\d{2})? · (.*)", line)
+        if dated:
+            detail = dated.group(1)
+            normalized = re.sub(r"[^a-z0-9]", "", detail.lower())
+            if any(course.lower() in detail.lower() and re.sub(r"[^a-z0-9]", "", item.lower()) in normalized
+                   for course, item, _ in rows):
+                continue
+        kept.append(line)
+
+    generated = "\n".join([start] + [row[2] for row in rows] + [end])
+    cleaned = re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip("\n")
+    new_body = generated + ("\n\n" + cleaned if cleaned else "")
+    updated = now[:section.start(1)] + new_body + now[section.end(1):]
+    if updated == now:
+        return False
+    with open(now_path, "w", encoding="utf-8") as f:
+        f.write(updated)
+    print("Synced %d Assessment Map rows into now.md" % len(rows))
+    return True
+
+
 def as_list(v):
     if isinstance(v, list):
         return v
@@ -171,6 +277,7 @@ def build_index(docs, folders):
 
 
 def main():
+    sync_school_assessments(NOTES, datetime.date.today().isoformat())
     docs = load_notes()
     known = [p for d in docs if d["kind"] == "project" for p in as_list(d["meta"].get("paths"))]
     folders = other_folders(known)
