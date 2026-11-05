@@ -1,3 +1,4 @@
+html { touch-action: manipulation; } /* no double-tap zoom; pinch still works */
 /* Brain's themes, shared by the desktop app (app/index.html) and the phone app (mobile/index.html).
    A theme is a family (the look) plus a mode (its light/dark variant); app/theme.js picks one and sets
    data-theme="<family>-<mode>", data-family and data-tone on <html>.
