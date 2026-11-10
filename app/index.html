@@ -849,7 +849,8 @@ function renderBoard(how) {
     board.innerHTML = boardHtml = html;
     BT.fit(board); drawMinis();
   };
-  if (how === "act" && moved && document.startViewTransition && !reduceMotion.matches) document.startViewTransition(paint); else paint();
+  // Any reflow glides (a refresh that reorders tiles too, not just his own moves), except mid-drag.
+  if (moved && document.startViewTransition && !reduceMotion.matches && !board.querySelector(".bt.dragging")) document.startViewTransition(paint); else paint();
 }
 
 /* ---------- front page layout: the cover is the page's headline, notes to self and Up next share one Today list, the other tiles sit in a rail ---------- */
@@ -948,7 +949,10 @@ addEventListener("pointermove", e => {
 addEventListener("pointerup", () => {
   const d = drag; drag = null; if (!d?.on) return;
   const over = board.querySelector(".bt.drop");
-  d.bt.classList.remove("dragging"); d.bt.style.translate = ""; over?.classList.remove("drop");
+  over?.classList.remove("drop");
+  // On a drop, leave the tile where the pointer let go: the view transition then glides it from there to its new spot
+  // (clearing the offset first made it snap back home, then slide). The repaint replaces it anyway.
+  if (!over) { d.bt.classList.remove("dragging"); d.bt.style.translate = ""; }
   dragged = true; setTimeout(() => dragged = false);  // the click that ends a drag doesn't open the tile
   if (over) saveOrder(BT.moveTo(tileList.map(i => i.key), d.k, over.dataset.k));
 });
